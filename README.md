@@ -1,0 +1,2 @@
+# oshell
+OCI shell utility 

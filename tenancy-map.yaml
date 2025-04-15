@@ -1,0 +1,35 @@
+---
+- environment: My Foo Dev Env
+  tenancy: foo_dev
+  tenancy_id: ocid1.tenancy.oc1..abcdefghijklmnopqrstuvwxyz1234567890
+  realm: OC1
+  compartments: foo_dev_dp foo_dev_cp dev_sec_ops
+  regions: us-chicago-1 us-ashburn-1
+
+- environment: My Bar Dev Env
+  tenancy: bar_dev
+  tenancy_id: ocid1.tenancy.oc1..abcdefghijklmnopqrstuvwxyz0987654321
+  realm: OC1
+  compartments: bar_dev_data_plane dev_sec_ops
+  regions: us-chicago-1
+
+- environment: My Foo Production Env
+  tenancy: bar_prod
+  tenancy_id: ocid1.tenancy.oc1..abcdefghijklmnopqrstuvwxyz5678901234
+  realm: OC1
+  compartments: foo_data_plane dev_sec_ops
+  regions: us-chicago-1 us-ashburn-1
+
+- environment: My Foo QA Gov Env
+  tenancy: foo_qa_gov
+  tenancy_id: ocid1.tenancy.oc2..abcdefghijklmnopqrstuvwxyz5432109876
+  realm: OC2
+  compartments: foo_gov_qa_cp foo_gov_qa_dp
+  regions: us-ashburn-1
+
+- environment: My Foo Prod Gov Env
+  tenancy: foo_prod_gov
+  tenancy_id: ocid1.tenancy.oc2..abcdefghijklmnopqrstuvwxyz1357924680
+  realm: OC2
+  compartments: foo_gov_prod_cp foo_gov_prod_dp
+  regions: us-ashburn-1 us-phoenix-1

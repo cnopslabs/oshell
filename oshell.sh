@@ -1,27 +1,11 @@
 #!/bin/zsh
 
+# Version: 0.1.0
+
 CYAN='\033[0;96m'
-YELLOW_ITALICS='\033[1;33m'
-UNSET=$(tput sgr0)
-
-alias ocienv='oci_env_print'
-function oci_env_print () {
-  env | egrep "OCI_|CID"
-}
-
-alias ocienvclear='oci_env_clear'
-function oci_env_clear() {
-  unset CID OCI_CLI_TENANCY
-}
-
-alias ocit='list_oci_tenants'
-function list_oci_tenants() {
-  oshiv info
-
-  echo ""
-  echo "To set tenancy, run: ${YELLOW}ocisettenant <TENANT>${NORMAL}"
-  echo "To set tenancy and compartment, run: ${YELLOW}ocisettenant <TENANT> <COMPARTMENT>${NORMAL}"
-}
+YELLOW='\033[;33m'
+UNSET_FMT=$(tput sgr0)
+RED='\033[0;31m'
 
 alias ociauth='oci_authenticate'
 function oci_authenticate() {
@@ -30,41 +14,43 @@ function oci_authenticate() {
   #   ociauth OC2
   #   ociauth OC1-Chicago
 
+  # Display tenancies / regions to help with OCI session auth selection
   oshiv info
   echo ""
 
-  # Use DEFAULT profile if profile not explicitly passed
   if [[ -z "${1}" ]]
+  # Using DEFAULT profile as profile not explicitly passed
   then
-    echo "Using profile: ${CYAN}DEFAULT${UNSET}\n"
+    echo "Using profile: ${CYAN}DEFAULT${UNSET_FMT}\n"
     oci session authenticate --profile-name DEFAULT
 
     if [[ $? -ne 0 ]]
     then
       echo "OCI authentication failed"
-      exit 1
+      return
     else
-      unset OCI_COMPARTMENT_NAME CID OCI_COMPARTMENT_ID OCI_CLI_TENANCY OCI_TENANCY_NAME
+      # Reset environment variables 
+      unset OCI_CLI_TENANCY OCI_TENANCY_NAME OCI_COMPARTMENT CID OCI_CLI_REGION
       echo "Setting OCI Profile to DEFAULT"
       export OCI_CLI_PROFILE=DEFAULT
     fi
   else
-    echo "Using profile: ${CYAN}${1}${UNSET}\n"
+    echo "Using profile: ${CYAN}${1}${UNSET_FMT}\n"
     oci session authenticate --profile-name $1
 
     if [[ $? -ne 0 ]]
     then
       echo "OCI authentication failed"
-      exit 1
+      return
     else
-      unset OCI_COMPARTMENT_NAME CID OCI_COMPARTMENT_ID OCI_CLI_TENANCY OCI_TENANCY_NAME
+      unset OCI_CLI_TENANCY OCI_TENANCY_NAME OCI_COMPARTMENT CID OCI_CLI_REGION
       echo "Setting OCI Profile to ${1}"
       export OCI_CLI_PROFILE=$1
     fi
   fi
 
   # Check for existing OCI auth refresher processes for profile
-  echo "Checking for existing oci_auth_refresher.sh for profile ${CYAN}$OCI_CLI_PROFILE${UNSET}\n"
+  echo "Checking for existing oci_auth_refresher.sh for profile ${CYAN}$OCI_CLI_PROFILE${UNSET_FMT}\n"
 
   REFRESHER_LOG_FILE="${HOME}/Library/Logs/oci-auth-refresher_${OCI_CLI_PROFILE}.log"
 
@@ -85,27 +71,67 @@ function oci_authenticate() {
     then
       # 
       echo "Existing refresher process found for the ${OCI_CLI_PROFILE} profile, killing process and restarting..."
+      echo date >> $REFRESHER_LOG_FILE
       echo "Killing process due to new OCI auth for profile ${OCI_CLI_PROFILE}" >> $REFRESHER_LOG_FILE
       kill -9 $r_pid
+      echo "expired" > ${HOME}/.oci/sessions/$OCI_CLI_PROFILE/session_status
       echo ""
-      nohup "${OSHELL_HOME}/oci_auth_refresher.sh" $OCI_CLI_PROFILE > $REFRESHER_LOG_FILE 2>&1 &
+      # Explicitly redirect all standard streams to protect the Python interpreter (oci cli) from crashing when the terminal closes
+      nohup "${OSHELL_HOME}/oci_auth_refresher.sh" $OCI_CLI_PROFILE > /dev/null 2>&1 < /dev/null &
       
       sleep 1
-      list_oci_tenants
-      exit 0
+      oshiv info
+      return
     fi
   done
 
   # No existing refresh processes were found for profile, start a new one
-  echo "No existing refresher process found for profile ${CYAN}$OCI_CLI_PROFILE${UNSET}"
-  echo "Running oci_auth_refresher.sh for profile ${CYAN}$OCI_CLI_PROFILE${UNSET} in the background\n"
-  nohup "${OSHELL_HOME}/oci_auth_refresher.sh" $OCI_CLI_PROFILE > $REFRESHER_LOG_FILE 2>&1 &
+  echo "No existing refresher process found for profile ${CYAN}$OCI_CLI_PROFILE${UNSET_FMT}"
+  echo "Running oci_auth_refresher.sh for profile ${CYAN}$OCI_CLI_PROFILE${UNSET_FMT} in the background\n"
+  # Explicitly redirect all standard streams to protect the Python interpreter (oci cli) from crashing when the terminal closes
+  nohup "${OSHELL_HOME}/oci_auth_refresher.sh" $OCI_CLI_PROFILE > /dev/null 2>&1 < /dev/null &
   sleep 1
-  list_oci_tenants
+  oshiv info
+}
+
+alias ocisettenancy='oci_set_tenancy'
+function oci_set_tenancy() {
+  # Usage: oci_set_tenancy TENANCY_NAME COMPARTMENT_NAME
+  tenancy_name=$1
+  compartment_name=$2
+
+  if [[ -n "${tenancy_name}" ]]
+  then
+    echo "Setting tenancy to ${YELLOW}${tenancy_name}${UNSET_FMT} via ${YELLOW}OCI_TENANCY_NAME${UNSET_FMT} environment variable"
+    export OCI_TENANCY_NAME=$tenancy_name
+  else
+    echo "Error: Tenancy name required"
+    return
+  fi
+  
+  if [[ -n "${compartment_name}" ]]
+  then
+    echo "Setting compartment to ${YELLOW}${compartment_name}${UNSET_FMT} via ${YELLOW}OCI_COMPARTMENT${UNSET_FMT} environment variable"
+    export OCI_COMPARTMENT=$compartment_name
+  fi
+
+  echo ""
+  oshiv config
+}
+
+alias ocienv='oci_env_print'
+function oci_env_print () {
+  env | egrep "OCI_|CID"
+}
+
+alias ociclear='oci_env_clear'
+function oci_env_clear() {
+  unset OCI_CLI_TENANCY OCI_TENANCY_NAME OCI_COMPARTMENT CID OCI_CLI_REGION
 }
 
 alias ocistat='oci_auth_status'
 function oci_auth_status() {
+  # Check status of current session per $OCI_CLI_PROFILE
   oci session validate --local
 
   # Check status of OCI auth refresher
@@ -131,49 +157,35 @@ function oci_auth_status() {
 
   if [[ -z "${proc_for_profile}" ]]
   then
-    echo "No existing OCI auth refresher process found for profile ${CYAN}$OCI_CLI_PROFILE${UNSET}"
+    echo "No existing OCI auth refresher process found for profile: ${CYAN}$OCI_CLI_PROFILE${UNSET_FMT}"
   else
-    echo "OCI auth refresher process for profile ${CYAN}$OCI_CLI_PROFILE${UNSET} is ${proc_for_profile}"
+    echo "OCI auth refresher process for profile ${CYAN}$OCI_CLI_PROFILE${UNSET_FMT} is ${proc_for_profile}"
   fi
 }
 
-alias ocisettenant='oci_set_tenant'
-function oci_set_tenant() {
-  oci_tenancy_id=`oshiv info -l $1`
-  export OCI_TENANCY_NAME=$1
+alias ociset='set_oci_cli_profile'
+function set_oci_cli_profile() {
+  # TODO: Check of valid profile: Does it exist? Is the session expired?
+  echo "Setting OCI_CLI_PROFILE to ${1}"
+  export OCI_CLI_PROFILE=$1
 
-  oci_env_clear
-  echo "Setting tenancy to ${oci_tenancy_id} via OCI_CLI_TENANCY environment variable"
-  export OCI_CLI_TENANCY=$oci_tenancy_id
-
-  if [[ ! -z "${2}" ]]
-  then
-    echo "Setting compartment to ${2} via oshiv"
-    oshiv compart -s $2
-  fi
-
-  oshiv config
+  echo ""
+  oshiv info
 }
 
-alias ocilist='list_oci_cli_profiles'
-function list_oci_cli_profile() {
-  echo "Profiles:"
+alias ocilistprofiles='list_oci_cli_profiles'
+function list_oci_cli_profiles() {
+  echo "${CYAN}Profiles:${UNSET_FMT}"
   for i in $( ls -1 $HOME/.oci/sessions/*/session_status )
   do
     session_status=`cat $i`
     profile_name=`echo $i | awk -F"/" '{print $6}'`
 
-    if [[ "${session_status}" == "valid" ]]
+    if [[ "${session_status}" == "expired" ]]
     then
-      echo $profile_name
+      echo "${profile_name} (${RED}${session_status}${UNSET_FMT})"
+    else
+      echo "${profile_name}"
     fi
   done
-}
-
-alias ociset='set_oci_cli_profile'
-function set_oci_cli_profile() {
-  echo "Setting OCI_CLI_PROFILE to ${1}"
-  export OCI_CLI_PROFILE=$1
-
-  list_oci_tenants
 }

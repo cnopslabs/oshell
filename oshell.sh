@@ -7,6 +7,8 @@ YELLOW='\033[;33m'
 UNSET_FMT=$(tput sgr0)
 RED='\033[0;31m'
 
+REFRESHER_LOG_FILE="${HOME}/Library/Logs/oci-auth-refresher_${OCI_CLI_PROFILE}.log"
+
 alias ociauth='oci_authenticate'
 function oci_authenticate() {
   # Usage: ociauth <OCI_PROFILE>
@@ -52,8 +54,6 @@ function oci_authenticate() {
   # Check for existing OCI auth refresher processes for profile
   echo "Checking for existing oci_auth_refresher.sh for profile ${CYAN}$OCI_CLI_PROFILE${UNSET_FMT}\n"
 
-  REFRESHER_LOG_FILE="${HOME}/Library/Logs/oci-auth-refresher_${OCI_CLI_PROFILE}.log"
-
   # Find all refresher processes (for all OCI profiles)
   for r_pid in $(pgrep -f oci_auth_refresher.sh)
   do
@@ -92,6 +92,32 @@ function oci_authenticate() {
   nohup "${OSHELL_HOME}/oci_auth_refresher.sh" $OCI_CLI_PROFILE > /dev/null 2>&1 < /dev/null &
   sleep 1
   oshiv info
+}
+
+alias ociexit='oci_auth_logout'
+function oci_auth_logout() {
+  # Logs you our of current session (I.e. the session to which your OCI_CLI_PROFILE var is set to)
+  for r_pid in $(pgrep -f oci_auth_refresher.sh)
+  do
+    # Get profile of OCI profile of PID
+    r_oci_profile=$(ps -p $r_pid -o command | grep -v COMMAND | awk '{print $3}')
+    if [[ $LOGLEVEL == "DEBUG" ]]
+    then
+      echo "Existing refresher process:"
+      echo "  PID: ${r_pid}"
+      echo "  PROFILE: ${r_oci_profile}\n"
+    fi
+
+    # Check if PID's profile is current shell's profile
+    if [[ $OCI_CLI_PROFILE == $r_oci_profile ]]
+    then
+      echo date >> $REFRESHER_LOG_FILE
+      echo "Existing refresher process found for the ${OCI_CLI_PROFILE} profile, killing process."
+      kill -9 $r_pid
+      echo "expired" > ${HOME}/.oci/sessions/$OCI_CLI_PROFILE/session_status
+      oci session terminate
+    fi
+  done
 }
 
 alias ocisettenancy='oci_set_tenancy'

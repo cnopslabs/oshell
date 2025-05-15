@@ -1,4 +1,6 @@
-####################################### Prompt
+# Prompt
+plugins=(emoji)
+
 function set_oci_prompt() {
   if [[ -z "${OCI_CLI_PROFILE}" ]]
   then
@@ -41,6 +43,5 @@ precmd() {
   set_oci_prompt
 }
 
-####################################### oshell initialization
-export OSHIV_SSH_HOME=$HOME/.ssh/oshiv
-source $OSHELL_HOME/oshell/oshell.sh
+# oshell initialization
+source $HOME/github/cnopslabs/oshell/oshell/oshell.sh

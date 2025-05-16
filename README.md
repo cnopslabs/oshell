@@ -92,8 +92,7 @@ source $OSHELL_HOME/oshell/oshell.sh
 <summary>Example</summary>
 
 ```
-export OSHELL_HOME=/Users/bob/github/cnopslabs/oshell
-source $OSHELL_HOME/oshell/oshell.sh
+source $HOME/github/cnopslab/oshell/oshell.sh
 ```
 
 </details>

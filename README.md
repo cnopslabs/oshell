@@ -160,8 +160,11 @@ My Foo Production Env  bar_prod      OC1    foo_data_plane dev_sec_ops         u
 My Foo QA Gov Env      foo_qa_gov    OC2    foo_gov_qa_dp foo_gov_qa_cp        us-ashburn-1
 My Foo Prod Gov Env    foo_prod_gov  OC2    foo_gov_prod_dp foo_gov_prod_cp    us-ashburn-1 us-phoenix-1
 
-To set tenancy, run: ocisettenant <TENANT>
-To set tenancy and compartment, run: ocisettenant <TENANT> <COMPARTMENT>
+To set Tenancy, Compartment, or Region export the OCI_TENANCY_NAME, OCI_COMPARTMENT, or OCI_CLI_REGION environment variables.
+
+Or if using oshell, run:
+oci_set_tenancy TENANCY_NAME
+oci_set_tenancy TENANCY_NAME COMPARTMENT_NAME
 ```
 
 </details>
@@ -169,7 +172,7 @@ To set tenancy and compartment, run: ocisettenant <TENANT> <COMPARTMENT>
 ### Set up OCI environment variables for tenant and compartment
 
 ```
-ocisettenant foo_prod_gov foo_gov_prod_dp
+oci_set_tenancy foo_prod_gov foo_gov_prod_dp
 ```
 
 <details>
@@ -179,6 +182,7 @@ ocisettenant foo_prod_gov foo_gov_prod_dp
 ```
 Setting tenancy to ocid1.tenancy.oc2..abcdefghijklmnopqrstuvwxyz1357924680 via OCI_CLI_TENANCY environment variable
 Setting compartment to foo_gov_prod_dp via oshiv
+
 Tenancy name: foo_prod_gov
 Tenancy ID: ocid1.tenancy.oc2..abcdefghijklmnopqrstuvwxyz135792468
 Compartment: foo_gov_prod_dp

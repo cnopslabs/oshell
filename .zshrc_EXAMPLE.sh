@@ -39,7 +39,6 @@ function set_oci_prompt() {
 }
 
 precmd() { 
-  vcs_info
   set_oci_prompt
 }
 

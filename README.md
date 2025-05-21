@@ -1,38 +1,46 @@
 # oshell
 
-Helper shell utilities for OCI CLI and [oshiv](https://github.com/cnopslabs/oshiv)
+Helper shell utilities for OCI CLI and [oshiv](https://github.com/cnopslabs/oshiv). This tool simplifies working with multiple OCI tenancies, compartments, and profiles.
+
+## Features
+
+- Authenticate to OCI with different profiles
+- Automatic session refreshing to maintain authentication
+- Easy switching between tenancies and compartments
+- Manage OCI environment variables
+- Shell prompt integration showing current OCI context
 
 ## Prerequisites
 
 ### OCI CLI
 
-[https://docs.oracle.com/en-us/iaas/Content/API/SDKDocs/cliinstall.htm](https://docs.oracle.com/en-us/iaas/Content/API/SDKDocs/cliinstall.htm)
+The Oracle Cloud Infrastructure Command Line Interface (OCI CLI) is required.
+
+[Install OCI CLI](https://docs.oracle.com/en-us/iaas/Content/API/SDKDocs/cliinstall.htm)
 
 ### oshiv
 
-[https://github.com/cnopslabs/oshiv#install-oshiv](https://github.com/cnopslabs/oshiv#install-oshiv)
+oshiv is a companion tool that provides simplified OCI resource management.
 
-## Install
+[Install oshiv](https://github.com/cnopslabs/oshiv#install-oshiv)
 
-### Clone this repo
+## Installation
 
-Example:
+### 1. Clone this repository
 
-```
+```bash
 git clone https://github.com/cnopslabs/oshell
 ```
 
-### Configure Tenancy map file (Recommended)
+### 2. Configure Tenancy Map (Recommended)
 
-Create an OCI tenancy mappings file. The tenancy map is informational only. It allows `oshiv` to quickly print the tenant and compartment details you use the most often.
+Create an OCI tenancy mappings file. The tenancy map allows `oshiv` to quickly print the tenant and compartment details you use most often.
 
-You can use the [tenancy-map.yaml](tenancy-map.yaml) from this repo as a starter template.
-
-```
+```bash
 cp tenancy-map.yaml $HOME/.oci
 ```
 
-Update `tenancy-map.yaml` with the tenancies and compartments relative to your role.
+Update `$HOME/.oci/tenancy-map.yaml` with your tenancies and compartments.
 
 <details>
 
@@ -78,31 +86,51 @@ Update `tenancy-map.yaml` with the tenancies and compartments relative to your r
 
 </details>
 
-### Add oshell to your ZSH shell initialization file `.zshrc`
+### 3. Add oshell to your ZSH configuration
 
-Update your ZSH init file (`$HOME/.zshrc`) with:
+Update your ZSH initialization file (`$HOME/.zshrc`) with:
 
-```
-export OSHELL_HOME=<PATH TO YOU LOCAL OSHELL GITHUB REPOSITORY>
-source $OSHELL_HOME/oshell/oshell.sh
+```bash
+# Set the path to your oshell installation
+export OSHELL_HOME=/path/to/oshell
+source $OSHELL_HOME/oshell.sh
 ```
 
 <details>
+<summary>Example .zshrc configuration</summary>
 
-<summary>Example</summary>
-
+```bash
+# oshell configuration
+export OSHELL_HOME=$HOME/github/cnopslabs/oshell
+source $OSHELL_HOME/oshell.sh
 ```
-source $HOME/github/cnopslab/oshell/oshell.sh
-```
 
+For shell prompt integration, see the included `.zshrc_EXAMPLE.sh` file.
 </details>
 
 ## Usage
 
-### Auth to OCI
+oshell provides several commands to manage your OCI authentication and environment:
 
-```
+| Command | Alias | Description |
+|---------|-------|-------------|
+| `oci_authenticate [profile]` | `ociauth` | Authenticate to OCI with the specified profile |
+| `oci_auth_logout` | `ociexit` | Log out of the current OCI session |
+| `oci_set_profile <profile>` | `ociset` | Set the current OCI profile |
+| `oci_set_tenancy <tenancy> [compartment]` | `ocisettenancy` | Set the current tenancy and optional compartment |
+| `oci_env_print` | `ocienv` | Display OCI environment variables |
+| `oci_env_clear` | `ociclear` | Clear OCI environment variables |
+| `oci_auth_status` | `ocistat` | Check the status of the current OCI session |
+| `oci_list_profiles` | `ocilistprofiles` | List all available OCI profiles |
+
+### Authenticate to OCI
+
+```bash
+# Authenticate with a specific profile
 ociauth OC2
+
+# Authenticate with the DEFAULT profile
+ociauth
 ```
 
 <details>
@@ -169,35 +197,79 @@ oci_set_tenancy TENANCY_NAME COMPARTMENT_NAME
 
 </details>
 
-### Set up OCI environment variables for tenant and compartment
+### Set Tenancy and Compartment
 
-```
-oci_set_tenancy foo_prod_gov foo_gov_prod_dp
+Set the current tenancy and optionally a compartment:
+
+```bash
+# Set just the tenancy
+ocisettenancy foo_prod_gov
+
+# Set both tenancy and compartment
+ocisettenancy foo_prod_gov foo_gov_prod_dp
 ```
 
 <details>
-
 <summary>Output</summary>
 
 ```
-Setting tenancy to ocid1.tenancy.oc2..abcdefghijklmnopqrstuvwxyz1357924680 via OCI_CLI_TENANCY environment variable
-Setting compartment to foo_gov_prod_dp via oshiv
+Setting tenancy to foo_prod_gov via OCI_TENANCY_NAME environment variable
+Setting compartment to foo_gov_prod_dp via OCI_COMPARTMENT environment variable
 
 Tenancy name: foo_prod_gov
 Tenancy ID: ocid1.tenancy.oc2..abcdefghijklmnopqrstuvwxyz135792468
 Compartment: foo_gov_prod_dp
 ```
-
 </details>
 
-## Verify
+### Switch Between Profiles
 
+```bash
+# Set the active profile
+ociset OC2
 ```
+
+### Check Session Status
+
+```bash
+# Check if your current session is valid
+ocistat
+```
+
+### List Available Profiles
+
+```bash
+# List all profiles and their status
+ocilistprofiles
+```
+
+### Manage Environment Variables
+
+```bash
+# Display all OCI-related environment variables
+ocienv
+
+# Clear OCI environment variables (except profile)
+ociclear
+```
+
+### Log Out
+
+```bash
+# Terminate the current session
+ociexit
+```
+
+## Using with oshiv
+
+After setting up your tenancy and compartment with oshell, you can use oshiv to manage OCI resources:
+
+```bash
+# List instances matching "home" in their name
 oshiv inst -f home
 ```
 
 <details>
-
 <summary>Output</summary>
 
 ```
@@ -219,5 +291,17 @@ State: RUNNING
 Created: 2025-04-08 17:07:26.232 +0000 UTC
 Subnet ID: ocid1.subnet.oc2.us-luke-1.abcdefghiklmnopqrsuvwxyz0987654321
 ```
-
 </details>
+
+## Shell Integration
+
+oshell can integrate with your ZSH prompt to show your current OCI context. See the included `.zshrc_EXAMPLE.sh` file for an example configuration.
+
+When properly configured, your prompt will show:
+- Current OCI profile
+- Tenancy (if set)
+- Compartment (if set)
+
+## How It Works
+
+oshell includes an authentication refresher that runs in the background to keep your OCI sessions active. The refresher automatically refreshes your session before it expires, so you don't have to re-authenticate manually.

@@ -1,0 +1,50 @@
+name: Zsh Script CI
+
+on:
+  push:
+    branches:
+      - "*"
+    paths-ignore:
+      - 'README.md'
+  pull_request:
+    paths-ignore:
+      - 'README.md'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Step 2: Install Zsh
+      - name: Install Zsh
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zsh
+
+      # Step 3: Perform Syntax Checks with Zsh
+      - name: Zsh Syntax Check
+        run: |
+          for script in $(find . -name '*.zsh' -o -name '*.sh'); do
+            echo "Checking syntax of $script..."
+            zsh -n "$script" || exit 1
+          done
+
+      # Optional: Step 4 - Linting with ShellCheck (Bash Mode)
+      - name: ShellCheck Lint (POSIX/Bash Compatibility)
+        run: |
+          sudo apt-get install -y shellcheck
+          for script in $(find . -name '*.zsh' -o -name '*.sh'); do
+            echo "Linting $script with shellcheck..."
+            shellcheck --shell=bash "$script"
+          done
+
+      # Step 5: Test Execution of Zsh Scripts
+      - name: Test Execution of Zsh Scripts
+        run: |
+          for script in $(find . -name '*.zsh' -o -name '*.sh'); do
+            echo "Testing script execution: $script"
+            zsh "$script" || exit 1
+          done

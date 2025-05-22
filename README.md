@@ -1,4 +1,5 @@
 # oshell
+[![CI](https://github.com/cnopslabs/oshell/actions/workflows/ci.yml/badge.svg)](https://github.com/cnopslabs/oshell/actions/workflows/ci.yml)
 
 Helper shell utilities for OCI CLI and [oshiv](https://github.com/cnopslabs/oshiv). This tool simplifies working with multiple OCI tenancies, compartments, and profiles.
 

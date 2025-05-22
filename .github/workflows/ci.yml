@@ -1,4 +1,4 @@
-name: Zsh Script CI
+name: Script CI
 
 on:
   push:

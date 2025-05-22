@@ -20,7 +20,7 @@ function find_oci_auth_refresher_process() {
   for r_pid in $(pgrep -f oci_auth_refresher.sh)
   do
     # Get profile of OCI profile of PID
-    r_oci_profile=$(ps -p "$r_pid -o command" | grep -v COMMAND | awk "{print $3}")
+    r_oci_profile=$(ps -p "$r_pid" -o command | grep -v COMMAND | awk '{print $3}')
     if [[ $LOGLEVEL == "DEBUG" ]]
     then
       echo "Existing refresher process:"

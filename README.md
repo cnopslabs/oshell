@@ -306,3 +306,134 @@ When properly configured, your prompt will show:
 ## How It Works
 
 oshell includes an authentication refresher that runs in the background to keep your OCI sessions active. The refresher automatically refreshes your session before it expires, so you don't have to re-authenticate manually.
+
+
+## Troubleshooting and Setup Fix
+
+This section helps resolve common issues related to `oci_auth_refresher.sh` not starting or running correctly.
+
+### Common Problems
+
+1. **`oci_auth_refresher.sh` Process Not Found**  
+   After running `pgrep -af oci_auth_refresher.sh`, if it's empty, the refresher process is not running.
+
+2. **Exit Code 127**  
+   This indicates the `oci_auth_refresher.sh` script could not be found or executed. The issue could be:
+    - Incorrect setup of the `$OSHELL_HOME` environment variable.
+    - Missing or improperly configured `oci_auth_refresher.sh`.
+    - The script doesn't have execute permissions.
+
+---
+
+### Steps to Fix
+
+#### **1. Verify `$OSHELL_HOME`**
+The `OSHELL_HOME` environment variable must point to the directory containing `oci_auth_refresher.sh`.
+
+1. Check the value of `$OSHELL_HOME`:
+   ```bash
+   echo $OSHELL_HOME
+   ```
+
+2. If it's not set or is incorrect, set it to the directory where `oshell` is installed. For example:
+   ```bash
+   export OSHELL_HOME=/path/to/oshell
+   ```
+
+3. Add this line to your `.zshrc` so the change persists:
+   ```bash
+   export OSHELL_HOME=/path/to/oshell
+   ```
+
+---
+
+#### **2. Check Refresher Script Location**
+Verify that `oci_auth_refresher.sh` exists in the `$OSHELL_HOME` directory:
+
+```bash
+ls -l ${OSHELL_HOME}/oci_auth_refresher.sh
+```
+
+- If the file is missing, download or pull the latest version of this repository.
+- If the file is present but not executable, make sure it has the correct permissions:
+  ```bash
+  chmod +x ${OSHELL_HOME}/oci_auth_refresher.sh
+  ```
+
+---
+
+#### **3. Debug the `oci_auth_refresher.sh` Manually**
+Run the refresher script directly to see if it works:
+
+```bash
+nohup "${OSHELL_HOME}/oci_auth_refresher.sh" <profile-name> &
+```
+
+- Replace `<profile-name>` with your OCI profile name (e.g., `DEFAULT`).
+- If this fails with an error, check your OCI setup and logs.
+
+---
+
+#### **4. Check for Running Processes**
+After running the refresher script or authenticating using `ociauth`, verify the process is running:
+
+```bash
+pgrep -af oci_auth_refresher.sh
+```
+
+If no results are shown, try the script troubleshooting steps again.
+
+---
+
+#### **5. Inspect Logs**
+If the refresher fails to start or exits prematurely, review the log file for details:
+
+```bash
+cat ~/Library/Logs/oci-auth-refresher_<profile-name>.log
+```
+
+Replace `<profile-name>` with the appropriate profile (e.g., `DEFAULT`).
+
+---
+
+#### **6. OCI CLI and Dependencies**
+Ensure OCI CLI is properly installed and available in your `PATH`. Check your OCI CLI version:
+
+```bash
+oci --version
+```
+
+If the OCI CLI is not installed, follow the [installation guide](https://docs.oracle.com/en-us/iaas/Content/API/SDKDocs/cliinstall.htm).
+
+---
+
+### Example Workflow to Fix Refresher Issues
+
+1. Verify the `$OSHELL_HOME` environment variable:
+   ```bash
+   echo $OSHELL_HOME
+   export OSHELL_HOME=/path/to/oshell
+   ```
+
+2. Ensure `oci_auth_refresher.sh` exists and is executable:
+   ```bash
+   ls -l ${OSHELL_HOME}/oci_auth_refresher.sh
+   chmod +x ${OSHELL_HOME}/oci_auth_refresher.sh
+   ```
+
+3. Authenticate using `ociauth`:
+   ```bash
+   ociauth DEFAULT
+   ```
+
+4. Check the refresher process:
+   ```bash
+   pgrep -af oci_auth_refresher.sh
+   ```
+
+5. Review logs for more details:
+   ```bash
+   cat ~/Library/Logs/oci-auth-refresher_DEFAULT.log
+   ```
+
+By following these steps, most common issues with the `oci_auth_refresher.sh` process should be resolved.

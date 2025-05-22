@@ -3,6 +3,25 @@
 
 Helper shell utilities for OCI CLI and [oshiv](https://github.com/cnopslabs/oshiv). This tool simplifies working with multiple OCI tenancies, compartments, and profiles.
 
+---
+
+## Table of Contents
+
+- [Features](#features)
+- [Prerequisites](#prerequisites)
+   - [OCI CLI](#oci-cli)
+   - [oshiv](#oshiv)
+- [Installation](#installation)
+   - [1. Clone this repository](#1-clone-this-repository)
+   - [2. Configure Tenancy Map (Recommended)](#2-configure-tenancy-map-recommended)
+   - [3. Add oshell to your ZSH configuration](#3-add-oshell-to-your-zsh-configuration)
+- [Usage](#usage)
+   - [Commands List](#commands-list)
+   - [Authenticate to OCI](#authenticate-to-oci)
+- [Troubleshooting and Setup Fix](#troubleshooting-and-setup-fix)
+
+---
+
 ## Features
 
 - Authenticate to OCI with different profiles
@@ -303,10 +322,13 @@ When properly configured, your prompt will show:
 - Tenancy (if set)
 - Compartment (if set)
 
+---
+
 ## How It Works
 
 oshell includes an authentication refresher that runs in the background to keep your OCI sessions active. The refresher automatically refreshes your session before it expires, so you don't have to re-authenticate manually.
 
+---
 
 ## Troubleshooting and Setup Fix
 

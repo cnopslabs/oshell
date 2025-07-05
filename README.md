@@ -28,7 +28,7 @@ Helper shell utilities for OCI CLI and [oshiv](https://github.com/cnopslabs/oshi
 - Automatic session refreshing to maintain authentication
 - Easy switching between tenancies and compartments
 - Manage OCI environment variables
-- Shell prompt integration showing current OCI context
+- Shell integration showing current OCI context
 
 ## Prerequisites
 
@@ -322,6 +322,8 @@ When properly configured, your prompt will show:
 - Tenancy (if set)
 - Compartment (if set)
 
+> **Warning:** This is a beta feature and may cause issues with your existing prompt and ZSH initialization.
+
 ---
 
 ## How It Works
@@ -388,10 +390,15 @@ ls -l ${OSHELL_HOME}/oci_auth_refresher.sh
 Run the refresher script directly to see if it works:
 
 ```bash
+# With a specific profile name
 nohup "${OSHELL_HOME}/oci_auth_refresher.sh" <profile-name> &
+
+# Or without a profile name (will use DEFAULT)
+nohup "${OSHELL_HOME}/oci_auth_refresher.sh" &
 ```
 
-- Replace `<profile-name>` with your OCI profile name (e.g., `DEFAULT`).
+- Replace `<profile-name>` with your OCI profile name if you want to use a specific profile.
+- If no profile name is provided, the script will use "DEFAULT".
 - If this fails with an error, check your OCI setup and logs.
 
 ---

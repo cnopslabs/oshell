@@ -4,16 +4,16 @@
 # OCI Authentication Refresher
 # This script keeps an OCI session active by refreshing it before it expires
 
-# Check if profile argument is provided
+# Check if profile argument is provided, use DEFAULT if not
 if [[ -z "$1" ]]
 then
-  echo "Error: OCI profile name required"
-  echo "Usage: $0 <profile_name>"
-  exit 1
+  echo "No profile name provided, using DEFAULT"
+  OCI_PROFILE="DEFAULT"
+else
+  OCI_PROFILE=$1
 fi
 
 # Configuration
-OCI_PROFILE=$1
 PREEMPT_REFRESH_TIME=60  # Attempt to refresh 60 sec before session expiration
 LOG_LOCATION="${HOME}/Library/Logs/oci-auth-refresher_${OCI_PROFILE}.log"
 SESSION_STATUS_FILE="${HOME}/.oci/sessions/${OCI_PROFILE}/session_status"

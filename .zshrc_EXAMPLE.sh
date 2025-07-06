@@ -57,7 +57,8 @@ precmd() {
 }
 
 # oshell initialization - update this path to match your installation
-export OSHELL_HOME=$HOME/SRE-Tools/oshell
+# Replace /path/to/oshell with the actual path where you installed oshell
+export OSHELL_HOME=/path/to/oshell
 source $OSHELL_HOME/oshell.sh
 
 # Available oshell commands:

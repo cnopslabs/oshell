@@ -121,7 +121,8 @@ source $OSHELL_HOME/oshell.sh
 
 ```bash
 # oshell configuration
-export OSHELL_HOME=$HOME/github/cnopslabs/oshell
+# Replace /path/to/oshell with the actual path where you installed oshell
+export OSHELL_HOME=/path/to/oshell
 source $OSHELL_HOME/oshell.sh
 ```
 

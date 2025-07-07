@@ -243,7 +243,11 @@ function oci_list_profiles() {
   echo "${CYAN}Profiles:${UNSET_FMT}"
 
   # Store status files in an array to avoid subshell issues
-  mapfile -t status_files < <(find "$sessions_dir" -name "session_status" 2>/dev/null)
+  # Using a more compatible approach instead of mapfile (which is Bash-specific)
+  local status_files=()
+  while IFS= read -r line; do
+    status_files+=("$line")
+  done < <(find "$sessions_dir" -name "session_status" 2>/dev/null)
 
   # Process each status file
   for status_file in "${status_files[@]}"

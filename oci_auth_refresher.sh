@@ -19,7 +19,7 @@ PREEMPT_REFRESH_TIME=60  # Attempt to refresh 60 sec before session expiration
 # Use a more CI-friendly log path and create the directory if it doesn't exist
 LOG_DIR="${HOME}/.oci/logs"
 mkdir -p "$LOG_DIR"
-LOG_LOCATION="${LOG_DIR}/oci-auth-refresher_${OCI_PROFILE}.log"
+LOG_LOCATION="${HOME}/.oci/sessions/${OCI_PROFILE}/oci-auth-refresher_${OCI_PROFILE}.log"
 SESSION_STATUS_FILE="${HOME}/.oci/sessions/${OCI_PROFILE}/session_status"
 
 # Helper function to log messages

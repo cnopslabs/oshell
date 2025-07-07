@@ -16,7 +16,10 @@ fi
 
 # Configuration
 PREEMPT_REFRESH_TIME=60  # Attempt to refresh 60 sec before session expiration
-LOG_LOCATION="${HOME}/Library/Logs/oci-auth-refresher_${OCI_PROFILE}.log"
+# Use a more CI-friendly log path and create the directory if it doesn't exist
+LOG_DIR="${HOME}/.oci/logs"
+mkdir -p "$LOG_DIR"
+LOG_LOCATION="${LOG_DIR}/oci-auth-refresher_${OCI_PROFILE}.log"
 SESSION_STATUS_FILE="${HOME}/.oci/sessions/${OCI_PROFILE}/session_status"
 
 # Helper function to log messages
@@ -46,7 +49,14 @@ function get_remaining_session_duration() {
 
     # Convert expiration time to epoch seconds
     local session_expiration_date_time_epoch
-    session_expiration_date_time_epoch=$(date -j -f "%Y-%m-%d %H:%M:%S" "${session_expiration_date_time}" +%s)
+    # Handle both BSD (macOS) and GNU (Linux) date
+    if date --version >/dev/null 2>&1; then
+      # GNU date (Linux)
+      session_expiration_date_time_epoch=$(date -d "${session_expiration_date_time}" +%s)
+    else
+      # BSD date (macOS)
+      session_expiration_date_time_epoch=$(date -j -f "%Y-%m-%d %H:%M:%S" "${session_expiration_date_time}" +%s)
+    fi
     local current_epoch
     current_epoch=$(date '+%s')
     remaining_time=$((session_expiration_date_time_epoch-current_epoch))

@@ -7,11 +7,19 @@
 # Color definitions for terminal output
 CYAN='\033[0;96m'
 YELLOW='\033[;33m'
-UNSET_FMT=$(tput sgr0)
+# Check if TERM is set before using tput
+if [[ -n "$TERM" ]]; then
+  UNSET_FMT=$(tput sgr0)
+else
+  UNSET_FMT='\033[0m'
+fi
 RED='\033[0;31m'
 
 # Log file for the OCI authentication refresher
-REFRESHER_LOG_FILE="${HOME}/Library/Logs/oci-auth-refresher_${OCI_CLI_PROFILE}.log"
+# Use a more CI-friendly log path and create the directory if it doesn't exist
+LOG_DIR="${HOME}/.oci/logs"
+mkdir -p "$LOG_DIR"
+REFRESHER_LOG_FILE="${LOG_DIR}/oci-auth-refresher_${OCI_CLI_PROFILE}.log"
 
 # Helper function to log messages
 function log_message() {
@@ -207,7 +215,7 @@ function oci_set_profile() {
 
   echo "Setting OCI_CLI_PROFILE to ${CYAN}${profile_name}${UNSET_FMT}"
   export OCI_CLI_PROFILE=$profile_name
-  REFRESHER_LOG_FILE="${HOME}/Library/Logs/oci-auth-refresher_${OCI_CLI_PROFILE}.log"
+  REFRESHER_LOG_FILE="${LOG_DIR}/oci-auth-refresher_${OCI_CLI_PROFILE}.log"
 
   echo ""
   oshiv info

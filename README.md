@@ -419,7 +419,7 @@ If no results are shown, try the script troubleshooting steps again.
 If the refresher fails to start or exits prematurely, review the log file for details:
 
 ```bash
-cat ${HOME}/.oci/logs/oci-auth-refresher_<profile-name>.log
+cat ${HOME}/.oci/sessions/<profile-name>/oci-auth-refresher_<profile-name>.log
 ```
 
 Replace `<profile-name>` with the appropriate profile (e.g., `DEFAULT`).
@@ -463,7 +463,7 @@ If the OCI CLI is not installed, follow the [installation guide](https://docs.or
 
 5. Review logs for more details:
    ```bash
-   cat ${HOME}/.oci/logs/oci-auth-refresher_DEFAULT.log
+   cat ${HOME}/.oci/sessions/DEFAULT/oci-auth-refresher_DEFAULT.log
    ```
 
 By following these steps, most common issues with the `oci_auth_refresher.sh` process should be resolved.

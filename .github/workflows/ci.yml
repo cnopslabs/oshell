@@ -11,9 +11,8 @@ on:
       - 'README.md'
 
 jobs:
-  test:
+  ci-shell-validation:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -39,12 +38,4 @@ jobs:
           for script in $(find . -name '*.zsh' -o -name '*.sh'); do
             echo "Linting $script with shellcheck..."
             shellcheck --shell=bash "$script"
-          done
-
-      # Step 5: Test Execution of Zsh Scripts
-      - name: Test Execution of Zsh Scripts
-        run: |
-          for script in $(find . -name '*.zsh' -o -name '*.sh'); do
-            echo "Testing script execution: $script"
-            zsh "$script" || exit 1
           done

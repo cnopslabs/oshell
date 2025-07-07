@@ -16,7 +16,7 @@ fi
 RED='\033[0;31m'
 
 # Configuration
-PREEMPT_REFRESH_TIME=60  # Attempt to refresh 60 sec before session expiration
+export PREEMPT_REFRESH_TIME=60  # Attempt to refresh 60 sec before session expiration
 LOG_LOCATION="${HOME}/.oci/sessions/${OCI_CLI_PROFILE}/oci-auth-refresher_${OCI_CLI_PROFILE}.log"
 SESSION_STATUS_FILE="${HOME}/.oci/sessions/${OCI_CLI_PROFILE}/session_status"
 

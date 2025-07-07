@@ -113,7 +113,7 @@ Update your ZSH initialization file (`$HOME/.zshrc`) with:
 ```bash
 # Set the path to your oshell installation
 export OSHELL_HOME=/path/to/oshell
-source $OSHELL_HOME/oshell.sh
+source "$OSHELL_HOME/oshell.sh"
 ```
 
 <details>
@@ -123,7 +123,7 @@ source $OSHELL_HOME/oshell.sh
 # oshell configuration
 # Replace /path/to/oshell with the actual path where you installed oshell
 export OSHELL_HOME=/path/to/oshell
-source $OSHELL_HOME/oshell.sh
+source "$OSHELL_HOME/oshell.sh"
 ```
 
 For shell prompt integration, see the included `.zshrc_EXAMPLE.sh` file.
@@ -357,7 +357,7 @@ The `OSHELL_HOME` environment variable must point to the directory containing `o
 
 1. Check the value of `$OSHELL_HOME`:
    ```bash
-   echo $OSHELL_HOME
+   echo "$OSHELL_HOME"
    ```
 
 2. If it's not set or is incorrect, set it to the directory where `oshell` is installed. For example:
@@ -376,13 +376,13 @@ The `OSHELL_HOME` environment variable must point to the directory containing `o
 Verify that `oci_auth_refresher.sh` exists in the `$OSHELL_HOME` directory:
 
 ```bash
-ls -l ${OSHELL_HOME}/oci_auth_refresher.sh
+ls -l "${OSHELL_HOME}/oci_auth_refresher.sh"
 ```
 
 - If the file is missing, download or pull the latest version of this repository.
 - If the file is present but not executable, make sure it has the correct permissions:
   ```bash
-  chmod +x ${OSHELL_HOME}/oci_auth_refresher.sh
+  chmod +x "${OSHELL_HOME}/oci_auth_refresher.sh"
   ```
 
 ---
@@ -419,7 +419,7 @@ If no results are shown, try the script troubleshooting steps again.
 If the refresher fails to start or exits prematurely, review the log file for details:
 
 ```bash
-cat ~/Library/Logs/oci-auth-refresher_<profile-name>.log
+cat ${HOME}/.oci/logs/oci-auth-refresher_<profile-name>.log
 ```
 
 Replace `<profile-name>` with the appropriate profile (e.g., `DEFAULT`).
@@ -441,14 +441,14 @@ If the OCI CLI is not installed, follow the [installation guide](https://docs.or
 
 1. Verify the `$OSHELL_HOME` environment variable:
    ```bash
-   echo $OSHELL_HOME
+   echo "$OSHELL_HOME"
    export OSHELL_HOME=/path/to/oshell
    ```
 
 2. Ensure `oci_auth_refresher.sh` exists and is executable:
    ```bash
-   ls -l ${OSHELL_HOME}/oci_auth_refresher.sh
-   chmod +x ${OSHELL_HOME}/oci_auth_refresher.sh
+   ls -l "${OSHELL_HOME}/oci_auth_refresher.sh"
+   chmod +x "${OSHELL_HOME}/oci_auth_refresher.sh"
    ```
 
 3. Authenticate using `ociauth`:
@@ -463,7 +463,7 @@ If the OCI CLI is not installed, follow the [installation guide](https://docs.or
 
 5. Review logs for more details:
    ```bash
-   cat ~/Library/Logs/oci-auth-refresher_DEFAULT.log
+   cat ${HOME}/.oci/logs/oci-auth-refresher_DEFAULT.log
    ```
 
 By following these steps, most common issues with the `oci_auth_refresher.sh` process should be resolved.

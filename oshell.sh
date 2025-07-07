@@ -14,7 +14,7 @@ REFRESHER_LOG_FILE="${HOME}/Library/Logs/oci-auth-refresher_${OCI_CLI_PROFILE}.l
 # Helper function to log messages
 function log_message() {
   local message=$1
-  echo "$(date): $message" >> $REFRESHER_LOG_FILE 2>&1 < /dev/null
+  echo "$(date): $message" >> "$REFRESHER_LOG_FILE" 2>&1 < /dev/null
 }
 
 # Helper function to find OCI auth refresher process for a specific profile
@@ -34,7 +34,7 @@ function find_oci_auth_refresher_process() {
     fi
   done
 
-  echo $found_pid
+  echo "$found_pid"
 }
 
 function start_oci_auth_refresher() {
@@ -43,13 +43,13 @@ function start_oci_auth_refresher() {
 
   if [[ $restart == "true" ]]; then
     log_message "Existing refresher process found for ${profile}, restarting..."
-    kill -9 $(find_oci_auth_refresher_process $profile)
-    echo "expired" > ${HOME}/.oci/sessions/$profile/session_status
+    kill -9 "$(find_oci_auth_refresher_process "$profile")"
+    echo "expired" > "${HOME}"/.oci/sessions/"$profile"/session_status
   else
     log_message "Starting new refresher process for ${profile}"
   fi
 
-  nohup "${OSHELL_HOME}/oci_auth_refresher.sh" $profile > /dev/null 2>&1 < /dev/null &
+  nohup "${OSHELL_HOME}/oci_auth_refresher.sh" "$profile" > /dev/null 2>&1 < /dev/null &
   sleep 1
 }
 
@@ -59,10 +59,9 @@ function oci_authenticate() {
   echo ""
 
   local profile_name="${1:-DEFAULT}"
-  echo "Using profile: ${CYAN}${profile_name}${UNSET_FMT}\n"
+  printf "Using profile: ${CYAN}${profile_name}${UNSET_FMT}\n"
 
-  oci session authenticate --profile-name $profile_name
-  if [[ $? -ne 0 ]]; then
+  if ! oci session authenticate --profile-name "$profile_name"; then
     echo "OCI authentication failed"
     return 1
   fi
@@ -72,12 +71,13 @@ function oci_authenticate() {
   export OCI_CLI_PROFILE=$profile_name
 
   log_message "Checking for existing refresher process for $OCI_CLI_PROFILE"
-  local refresher_pid=$(find_oci_auth_refresher_process $OCI_CLI_PROFILE)
+  local refresher_pid
+  refresher_pid=$(find_oci_auth_refresher_process "$OCI_CLI_PROFILE")
 
   if [[ -n "$refresher_pid" ]]; then
-    start_oci_auth_refresher $OCI_CLI_PROFILE "true"
+    start_oci_auth_refresher "$OCI_CLI_PROFILE" "true"
   else
-    start_oci_auth_refresher $OCI_CLI_PROFILE "false"
+    start_oci_auth_refresher "$OCI_CLI_PROFILE" "false"
   fi
 
   oshiv info
@@ -90,15 +90,15 @@ function oci_auth_logout() {
     return 0
   fi
 
-  local refresher_pid=$(find_oci_auth_refresher_process $OCI_CLI_PROFILE)
+  local refresher_pid
+  refresher_pid=$(find_oci_auth_refresher_process "$OCI_CLI_PROFILE")
   if [[ -n "$refresher_pid" ]]; then
     log_message "Killing refresher process for profile ${OCI_CLI_PROFILE}"
-    kill -9 $refresher_pid
-    echo "expired" > ${HOME}/.oci/sessions/$OCI_CLI_PROFILE/session_status
+    kill -9 "$refresher_pid"
+    echo "expired" > "${HOME}"/.oci/sessions/"$OCI_CLI_PROFILE"/session_status
   fi
 
-  oci session terminate
-  if [[ $? -eq 0 ]]; then
+  if oci session terminate; then
     echo "Successfully logged out from OCI profile: ${CYAN}${OCI_CLI_PROFILE}${UNSET_FMT}"
   else
     echo "Failed to terminate OCI session for profile: ${CYAN}${OCI_CLI_PROFILE}${UNSET_FMT}"
@@ -133,7 +133,8 @@ function oci_set_tenancy() {
 alias ocienv='oci_env_print'
 function oci_env_print() {
   echo "OCI Environment Variables:"
-  local oci_vars=$(env | egrep "OCI_|CID")
+  local oci_vars
+  oci_vars=$(env | grep -E "OCI_|CID")
 
   if [[ -z "$oci_vars" ]]; then
     echo "  No OCI environment variables set"
@@ -175,7 +176,8 @@ function oci_auth_status() {
     echo "Session for profile ${CYAN}${OCI_CLI_PROFILE}${UNSET_FMT} is ${RED}invalid${UNSET_FMT}"
   fi
 
-  local refresher_pid=$(find_oci_auth_refresher_process $OCI_CLI_PROFILE)
+  local refresher_pid
+  refresher_pid=$(find_oci_auth_refresher_process "$OCI_CLI_PROFILE")
 
   if [[ -z "${refresher_pid}" ]]; then
     echo "No existing OCI auth refresher process found for profile: ${CYAN}$OCI_CLI_PROFILE${UNSET_FMT}"
@@ -222,10 +224,12 @@ function oci_list_profiles() {
   local profile_count=0
   echo "${CYAN}Profiles:${UNSET_FMT}"
 
-  for status_file in $(find "$sessions_dir" -name "session_status" 2>/dev/null)
+  find "$sessions_dir" -name "session_status" 2>/dev/null | while read -r status_file
   do
-    local session_status=$(cat "$status_file")
-    local profile_name=$(echo "$status_file" | awk -F"/" '{print $6}')
+    local session_status
+    session_status=$(cat "$status_file")
+    local profile_name
+    profile_name=$(echo "$status_file" | awk -F"/" '{print $6}')
     profile_count=$((profile_count + 1))
 
     if [[ "$profile_name" == "$OCI_CLI_PROFILE" ]]; then

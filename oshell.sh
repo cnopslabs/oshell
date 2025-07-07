@@ -15,16 +15,18 @@ else
 fi
 RED='\033[0;31m'
 
-# Log file for the OCI authentication refresher
-# Use a more CI-friendly log path and create the directory if it doesn't exist
-LOG_DIR="${HOME}/.oci/logs"
-mkdir -p "$LOG_DIR"
-REFRESHER_LOG_FILE="${LOG_DIR}/oci-auth-refresher_${OCI_CLI_PROFILE}.log"
+# Configuration
+PREEMPT_REFRESH_TIME=60  # Attempt to refresh 60 sec before session expiration
+LOG_LOCATION="${HOME}/.oci/sessions/${OCI_CLI_PROFILE}/oci-auth-refresher_${OCI_CLI_PROFILE}.log"
+SESSION_STATUS_FILE="${HOME}/.oci/sessions/${OCI_CLI_PROFILE}/session_status"
+
+# Ensure session directory exists
+mkdir -p "${HOME}/.oci/sessions/${OCI_CLI_PROFILE}"
 
 # Helper function to log messages
 function log_message() {
   local message=$1
-  echo "$(date): $message" >> "$REFRESHER_LOG_FILE" 2>&1 < /dev/null
+  echo "$(date): $message" >> "$LOG_LOCATION" 2>&1 < /dev/null
 }
 
 # Helper function to find OCI auth refresher process for a specific profile
@@ -54,7 +56,9 @@ function start_oci_auth_refresher() {
   if [[ $restart == "true" ]]; then
     log_message "Existing refresher process found for ${profile}, restarting..."
     kill -9 "$(find_oci_auth_refresher_process "$profile")"
-    echo "expired" > "${HOME}"/.oci/sessions/"$profile"/session_status
+    # Set session status file path for this profile
+    local profile_session_status="${HOME}/.oci/sessions/${profile}/session_status"
+    echo "expired" > "$profile_session_status"
   else
     log_message "Starting new refresher process for ${profile}"
   fi
@@ -105,7 +109,7 @@ function oci_auth_logout() {
   if [[ -n "$refresher_pid" ]]; then
     log_message "Killing refresher process for profile ${OCI_CLI_PROFILE}"
     kill -9 "$refresher_pid"
-    echo "expired" > "${HOME}"/.oci/sessions/"$OCI_CLI_PROFILE"/session_status
+    echo "expired" > "$SESSION_STATUS_FILE"
   fi
 
   if oci session terminate; then
@@ -215,7 +219,11 @@ function oci_set_profile() {
 
   echo "Setting OCI_CLI_PROFILE to ${CYAN}${profile_name}${UNSET_FMT}"
   export OCI_CLI_PROFILE=$profile_name
-  REFRESHER_LOG_FILE="${LOG_DIR}/oci-auth-refresher_${OCI_CLI_PROFILE}.log"
+  LOG_LOCATION="${HOME}/.oci/sessions/${OCI_CLI_PROFILE}/oci-auth-refresher_${OCI_CLI_PROFILE}.log"
+  SESSION_STATUS_FILE="${HOME}/.oci/sessions/${OCI_CLI_PROFILE}/session_status"
+
+  # Ensure session directory exists
+  mkdir -p "${HOME}/.oci/sessions/${OCI_CLI_PROFILE}"
 
   echo ""
   oshiv info

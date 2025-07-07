@@ -1,38 +1,66 @@
 # oshell
+[![CI](https://github.com/cnopslabs/oshell/actions/workflows/ci.yml/badge.svg)](https://github.com/cnopslabs/oshell/actions/workflows/ci.yml)
 
-Helper shell utilities for OCI CLI and [oshiv](https://github.com/cnopslabs/oshiv)
+Helper shell utilities for OCI CLI and [oshiv](https://github.com/cnopslabs/oshiv). This tool simplifies working with multiple OCI tenancies, compartments, and profiles.
+
+---
+
+## Table of Contents
+
+- [Features](#features)
+- [Prerequisites](#prerequisites)
+   - [OCI CLI](#oci-cli)
+   - [oshiv](#oshiv)
+- [Installation](#installation)
+   - [1. Clone this repository](#1-clone-this-repository)
+   - [2. Configure Tenancy Map (Recommended)](#2-configure-tenancy-map-recommended)
+   - [3. Add oshell to your ZSH configuration](#3-add-oshell-to-your-zsh-configuration)
+- [Usage](#usage)
+   - [Commands List](#commands-list)
+   - [Authenticate to OCI](#authenticate-to-oci)
+- [Troubleshooting and Setup Fix](#troubleshooting-and-setup-fix)
+
+---
+
+## Features
+
+- Authenticate to OCI with different profiles
+- Automatic session refreshing to maintain authentication
+- Easy switching between tenancies and compartments
+- Manage OCI environment variables
+- Shell integration showing current OCI context
 
 ## Prerequisites
 
 ### OCI CLI
 
-[https://docs.oracle.com/en-us/iaas/Content/API/SDKDocs/cliinstall.htm](https://docs.oracle.com/en-us/iaas/Content/API/SDKDocs/cliinstall.htm)
+The Oracle Cloud Infrastructure Command Line Interface (OCI CLI) is required.
+
+[Install OCI CLI](https://docs.oracle.com/en-us/iaas/Content/API/SDKDocs/cliinstall.htm)
 
 ### oshiv
 
-[https://github.com/cnopslabs/oshiv#install-oshiv](https://github.com/cnopslabs/oshiv#install-oshiv)
+oshiv is a companion tool that provides simplified OCI resource management.
 
-## Install
+[Install oshiv](https://github.com/cnopslabs/oshiv#install-oshiv)
 
-### Clone this repo
+## Installation
 
-Example:
+### 1. Clone this repository
 
-```
+```bash
 git clone https://github.com/cnopslabs/oshell
 ```
 
-### Configure Tenancy map file (Recommended)
+### 2. Configure Tenancy Map (Recommended)
 
-Create an OCI tenancy mappings file. The tenancy map is informational only. It allows `oshiv` to quickly print the tenant and compartment details you use the most often.
+Create an OCI tenancy mappings file. The tenancy map allows `oshiv` to quickly print the tenant and compartment details you use most often.
 
-You can use the [tenancy-map.yaml](tenancy-map.yaml) from this repo as a starter template.
-
-```
+```bash
 cp tenancy-map.yaml $HOME/.oci
 ```
 
-Update `tenancy-map.yaml` with the tenancies and compartments relative to your role.
+Update `$HOME/.oci/tenancy-map.yaml` with your tenancies and compartments.
 
 <details>
 
@@ -78,31 +106,52 @@ Update `tenancy-map.yaml` with the tenancies and compartments relative to your r
 
 </details>
 
-### Add oshell to your ZSH shell initialization file `.zshrc`
+### 3. Add oshell to your ZSH configuration
 
-Update your ZSH init file (`$HOME/.zshrc`) with:
+Update your ZSH initialization file (`$HOME/.zshrc`) with:
 
-```
-export OSHELL_HOME=<PATH TO YOU LOCAL OSHELL GITHUB REPOSITORY>
-source $OSHELL_HOME/oshell/oshell.sh
+```bash
+# Set the path to your oshell installation
+export OSHELL_HOME=/path/to/oshell
+source $OSHELL_HOME/oshell.sh
 ```
 
 <details>
+<summary>Example .zshrc configuration</summary>
 
-<summary>Example</summary>
-
+```bash
+# oshell configuration
+# Replace /path/to/oshell with the actual path where you installed oshell
+export OSHELL_HOME=/path/to/oshell
+source $OSHELL_HOME/oshell.sh
 ```
-source $HOME/github/cnopslab/oshell/oshell.sh
-```
 
+For shell prompt integration, see the included `.zshrc_EXAMPLE.sh` file.
 </details>
 
 ## Usage
 
-### Auth to OCI
+oshell provides several commands to manage your OCI authentication and environment:
 
-```
+| Command | Alias | Description |
+|---------|-------|-------------|
+| `oci_authenticate [profile]` | `ociauth` | Authenticate to OCI with the specified profile |
+| `oci_auth_logout` | `ociexit` | Log out of the current OCI session |
+| `oci_set_profile <profile>` | `ociset` | Set the current OCI profile |
+| `oci_set_tenancy <tenancy> [compartment]` | `ocisettenancy` | Set the current tenancy and optional compartment |
+| `oci_env_print` | `ocienv` | Display OCI environment variables |
+| `oci_env_clear` | `ociclear` | Clear OCI environment variables |
+| `oci_auth_status` | `ocistat` | Check the status of the current OCI session |
+| `oci_list_profiles` | `ocilistprofiles` | List all available OCI profiles |
+
+### Authenticate to OCI
+
+```bash
+# Authenticate with a specific profile
 ociauth OC2
+
+# Authenticate with the DEFAULT profile
+ociauth
 ```
 
 <details>
@@ -169,35 +218,79 @@ oci_set_tenancy TENANCY_NAME COMPARTMENT_NAME
 
 </details>
 
-### Set up OCI environment variables for tenant and compartment
+### Set Tenancy and Compartment
 
-```
-oci_set_tenancy foo_prod_gov foo_gov_prod_dp
+Set the current tenancy and optionally a compartment:
+
+```bash
+# Set just the tenancy
+ocisettenancy foo_prod_gov
+
+# Set both tenancy and compartment
+ocisettenancy foo_prod_gov foo_gov_prod_dp
 ```
 
 <details>
-
 <summary>Output</summary>
 
 ```
-Setting tenancy to ocid1.tenancy.oc2..abcdefghijklmnopqrstuvwxyz1357924680 via OCI_CLI_TENANCY environment variable
-Setting compartment to foo_gov_prod_dp via oshiv
+Setting tenancy to foo_prod_gov via OCI_TENANCY_NAME environment variable
+Setting compartment to foo_gov_prod_dp via OCI_COMPARTMENT environment variable
 
 Tenancy name: foo_prod_gov
 Tenancy ID: ocid1.tenancy.oc2..abcdefghijklmnopqrstuvwxyz135792468
 Compartment: foo_gov_prod_dp
 ```
-
 </details>
 
-## Verify
+### Switch Between Profiles
 
+```bash
+# Set the active profile
+ociset OC2
 ```
+
+### Check Session Status
+
+```bash
+# Check if your current session is valid
+ocistat
+```
+
+### List Available Profiles
+
+```bash
+# List all profiles and their status
+ocilistprofiles
+```
+
+### Manage Environment Variables
+
+```bash
+# Display all OCI-related environment variables
+ocienv
+
+# Clear OCI environment variables (except profile)
+ociclear
+```
+
+### Log Out
+
+```bash
+# Terminate the current session
+ociexit
+```
+
+## Using with oshiv
+
+After setting up your tenancy and compartment with oshell, you can use oshiv to manage OCI resources:
+
+```bash
+# List instances matching "home" in their name
 oshiv inst -f home
 ```
 
 <details>
-
 <summary>Output</summary>
 
 ```
@@ -219,5 +312,158 @@ State: RUNNING
 Created: 2025-04-08 17:07:26.232 +0000 UTC
 Subnet ID: ocid1.subnet.oc2.us-luke-1.abcdefghiklmnopqrsuvwxyz0987654321
 ```
-
 </details>
+
+## Shell Integration
+
+oshell can integrate with your ZSH prompt to show your current OCI context. See the included `.zshrc_EXAMPLE.sh` file for an example configuration.
+
+When properly configured, your prompt will show:
+- Current OCI profile
+- Tenancy (if set)
+- Compartment (if set)
+
+> **Warning:** This is a beta feature and may cause issues with your existing prompt and ZSH initialization.
+
+---
+
+## How It Works
+
+oshell includes an authentication refresher that runs in the background to keep your OCI sessions active. The refresher automatically refreshes your session before it expires, so you don't have to re-authenticate manually.
+
+---
+
+## Troubleshooting and Setup Fix
+
+This section helps resolve common issues related to `oci_auth_refresher.sh` not starting or running correctly.
+
+### Common Problems
+
+1. **`oci_auth_refresher.sh` Process Not Found**  
+   After running `pgrep -af oci_auth_refresher.sh`, if it's empty, the refresher process is not running.
+
+2. **Exit Code 127**  
+   This indicates the `oci_auth_refresher.sh` script could not be found or executed. The issue could be:
+    - Incorrect setup of the `$OSHELL_HOME` environment variable.
+    - Missing or improperly configured `oci_auth_refresher.sh`.
+    - The script doesn't have execute permissions.
+
+---
+
+### Steps to Fix
+
+#### **1. Verify `$OSHELL_HOME`**
+The `OSHELL_HOME` environment variable must point to the directory containing `oci_auth_refresher.sh`.
+
+1. Check the value of `$OSHELL_HOME`:
+   ```bash
+   echo $OSHELL_HOME
+   ```
+
+2. If it's not set or is incorrect, set it to the directory where `oshell` is installed. For example:
+   ```bash
+   export OSHELL_HOME=/path/to/oshell
+   ```
+
+3. Add this line to your `.zshrc` so the change persists:
+   ```bash
+   export OSHELL_HOME=/path/to/oshell
+   ```
+
+---
+
+#### **2. Check Refresher Script Location**
+Verify that `oci_auth_refresher.sh` exists in the `$OSHELL_HOME` directory:
+
+```bash
+ls -l ${OSHELL_HOME}/oci_auth_refresher.sh
+```
+
+- If the file is missing, download or pull the latest version of this repository.
+- If the file is present but not executable, make sure it has the correct permissions:
+  ```bash
+  chmod +x ${OSHELL_HOME}/oci_auth_refresher.sh
+  ```
+
+---
+
+#### **3. Debug the `oci_auth_refresher.sh` Manually**
+Run the refresher script directly to see if it works:
+
+```bash
+# With a specific profile name
+nohup "${OSHELL_HOME}/oci_auth_refresher.sh" <profile-name> &
+
+# Or without a profile name (will use DEFAULT)
+nohup "${OSHELL_HOME}/oci_auth_refresher.sh" &
+```
+
+- Replace `<profile-name>` with your OCI profile name if you want to use a specific profile.
+- If no profile name is provided, the script will use "DEFAULT".
+- If this fails with an error, check your OCI setup and logs.
+
+---
+
+#### **4. Check for Running Processes**
+After running the refresher script or authenticating using `ociauth`, verify the process is running:
+
+```bash
+pgrep -af oci_auth_refresher.sh
+```
+
+If no results are shown, try the script troubleshooting steps again.
+
+---
+
+#### **5. Inspect Logs**
+If the refresher fails to start or exits prematurely, review the log file for details:
+
+```bash
+cat ~/Library/Logs/oci-auth-refresher_<profile-name>.log
+```
+
+Replace `<profile-name>` with the appropriate profile (e.g., `DEFAULT`).
+
+---
+
+#### **6. OCI CLI and Dependencies**
+Ensure OCI CLI is properly installed and available in your `PATH`. Check your OCI CLI version:
+
+```bash
+oci --version
+```
+
+If the OCI CLI is not installed, follow the [installation guide](https://docs.oracle.com/en-us/iaas/Content/API/SDKDocs/cliinstall.htm).
+
+---
+
+### Example Workflow to Fix Refresher Issues
+
+1. Verify the `$OSHELL_HOME` environment variable:
+   ```bash
+   echo $OSHELL_HOME
+   export OSHELL_HOME=/path/to/oshell
+   ```
+
+2. Ensure `oci_auth_refresher.sh` exists and is executable:
+   ```bash
+   ls -l ${OSHELL_HOME}/oci_auth_refresher.sh
+   chmod +x ${OSHELL_HOME}/oci_auth_refresher.sh
+   ```
+
+3. Authenticate using `ociauth`:
+   ```bash
+   ociauth DEFAULT
+   ```
+
+4. Check the refresher process:
+   ```bash
+   pgrep -af oci_auth_refresher.sh
+   ```
+
+5. Review logs for more details:
+   ```bash
+   cat ~/Library/Logs/oci-auth-refresher_DEFAULT.log
+   ```
+
+By following these steps, most common issues with the `oci_auth_refresher.sh` process should be resolved.

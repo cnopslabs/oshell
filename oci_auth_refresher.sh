@@ -1,4 +1,5 @@
 #!/bin/zsh
+# shellcheck shell=bash disable=SC1071
 
 # Version: 0.1.0
 # OCI Authentication Refresher
@@ -21,7 +22,7 @@ SESSION_STATUS_FILE="${HOME}/.oci/sessions/${OCI_PROFILE}/session_status"
 # Helper function to log messages
 function log_message() {
   local message=$1
-  echo "$(date): $message" >> $LOG_LOCATION 2>&1 < /dev/null
+  echo "$(date): $message" >> "$LOG_LOCATION" 2>&1 < /dev/null
 }
 
 # Function to get the remaining duration of the current session
@@ -29,30 +30,34 @@ function get_remaining_session_duration() {
   local profile=$1
 
   log_message "Checking if session is valid for profile ${profile}"
-  oci session validate --profile $profile --local >> $LOG_LOCATION 2>&1 < /dev/null
+  oci session validate --profile "$profile" --local >> "$LOG_LOCATION" 2>&1 < /dev/null
   local validate_result=$?
 
   if [[ $validate_result -eq 0 ]]
   then
     log_message "Session is valid"
     oci_session_status="valid"
-    echo $oci_session_status > $SESSION_STATUS_FILE
+    echo "$oci_session_status" > "$SESSION_STATUS_FILE"
 
     log_message "Determining remaining session duration"
-    local session_expiration_date_time=$(oci session validate --profile $profile --local 2>&1 | awk '{print $5, $6}')
+    local session_expiration_date_time
+    session_expiration_date_time=$(oci session validate --profile "$profile" --local 2>&1 | awk '{print $5, $6}')
     log_message "Session expiration date/time: ${session_expiration_date_time}"
 
     # Convert expiration time to epoch seconds
-    local session_expiration_date_time_epoch=$(date -j -f "%Y-%m-%d %H:%M:%S" "${session_expiration_date_time}" +%s)
-    local current_epoch=$(date '+%s')
-    remaining_time=$(($session_expiration_date_time_epoch-$current_epoch))
-    local remaining_time_min=$(($remaining_time/60))
+    local session_expiration_date_time_epoch
+    session_expiration_date_time_epoch=$(date -j -f "%Y-%m-%d %H:%M:%S" "${session_expiration_date_time}" +%s)
+    local current_epoch
+    current_epoch=$(date '+%s')
+    remaining_time=$((session_expiration_date_time_epoch-current_epoch))
+    local remaining_time_min
+    remaining_time_min=$((remaining_time/60))
 
     log_message "Remaining time: ${remaining_time_min} minutes (${remaining_time} seconds)"
   else
     log_message "Session is expired"
     oci_session_status="expired"
-    echo $oci_session_status > $SESSION_STATUS_FILE
+    echo "$oci_session_status" > "$SESSION_STATUS_FILE"
   fi
 }
 
@@ -61,7 +66,7 @@ function refresh_session() {
   local profile=$1
 
   log_message "Attempting to refresh session for profile ${profile}"
-  oci session refresh --profile $profile >> $LOG_LOCATION 2>&1 < /dev/null
+  oci session refresh --profile "$profile" >> "$LOG_LOCATION" 2>&1 < /dev/null
   local refresh_result=$?
 
   if [[ $refresh_result -eq 0 ]]
@@ -71,7 +76,7 @@ function refresh_session() {
   else
     log_message "Refresh failed, exiting..."
     oci_session_status="expired"
-    echo $oci_session_status > $SESSION_STATUS_FILE
+    echo "$oci_session_status" > "$SESSION_STATUS_FILE"
     return 1
   fi
 }
@@ -89,32 +94,31 @@ then
 fi
 
 # Main loop
-get_remaining_session_duration $OCI_PROFILE
+get_remaining_session_duration "$OCI_PROFILE"
 
 while [[ $oci_session_status != "expired" ]]
 do
   if [[ $remaining_time -gt $PREEMPT_REFRESH_TIME ]]
   then
     # Calculate sleep time (refresh before expiration)
-    sleep_time=$(($remaining_time-$PREEMPT_REFRESH_TIME))
-    sleep_time_min=$(($sleep_time/60))
+    sleep_time=$((remaining_time-PREEMPT_REFRESH_TIME))
+    sleep_time_min=$((sleep_time/60))
     log_message "Sleeping for ${sleep_time_min} minutes (${sleep_time} seconds)"
     sleep $sleep_time
 
     # Refresh the session
-    refresh_session $OCI_PROFILE
-    if [[ $? -ne 0 ]]
+    if ! refresh_session "$OCI_PROFILE"
     then
       log_message "Exiting due to refresh failure"
       exit 1
     fi
 
     # Check the new session duration
-    get_remaining_session_duration $OCI_PROFILE
+    get_remaining_session_duration "$OCI_PROFILE"
   else
     log_message "Remaining time too short to continue the refresh process, exiting"
     oci_session_status="expired"
-    echo $oci_session_status > $SESSION_STATUS_FILE
+    echo "$oci_session_status" > "$SESSION_STATUS_FILE"
     exit 0
   fi
 done

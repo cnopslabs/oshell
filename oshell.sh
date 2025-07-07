@@ -1,4 +1,6 @@
 #!/bin/zsh
+# shellcheck shell=bash disable=SC1071
+
 
 # Version: 0.1.0
 
@@ -59,7 +61,7 @@ function oci_authenticate() {
   echo ""
 
   local profile_name="${1:-DEFAULT}"
-  printf "Using profile: ${CYAN}${profile_name}${UNSET_FMT}\n"
+  printf "Using profile: %s%s%s\n" "${CYAN}" "${profile_name}" "${UNSET_FMT}"
 
   if ! oci session authenticate --profile-name "$profile_name"; then
     echo "OCI authentication failed"
@@ -224,7 +226,11 @@ function oci_list_profiles() {
   local profile_count=0
   echo "${CYAN}Profiles:${UNSET_FMT}"
 
-  find "$sessions_dir" -name "session_status" 2>/dev/null | while read -r status_file
+  # Store status files in an array to avoid subshell issues
+  mapfile -t status_files < <(find "$sessions_dir" -name "session_status" 2>/dev/null)
+
+  # Process each status file
+  for status_file in "${status_files[@]}"
   do
     local session_status
     session_status=$(cat "$status_file")

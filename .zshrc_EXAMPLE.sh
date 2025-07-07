@@ -1,5 +1,11 @@
+#!/bin/zsh
+# shellcheck shell=bash disable=SC1071
 # Prompt configuration for OCI integration
+# The plugins variable is used by oh-my-zsh to load plugins
+# shellcheck disable=SC2034
 plugins=(emoji)
+# The emoji array is provided by the emoji plugin
+# shellcheck disable=SC2154
 
 # Function to set the OCI prompt based on current profile, tenancy, and compartment
 function set_oci_prompt() {
@@ -10,13 +16,14 @@ function set_oci_prompt() {
     return
   fi
 
-  local session_status_file="$HOME/.oci/sessions/$OCI_CLI_PROFILE/session_status"
+  local session_status_file="$HOME/.oci/sessions/${OCI_CLI_PROFILE}/session_status"
 
   # Check if the session status file exists
-  if [[ -f $session_status_file ]]
+  if [[ -f "$session_status_file" ]]
   then
     # OCI profile and session status file exists, so get session status
-    local oci_session_status=$(cat ${session_status_file})
+    local oci_session_status
+    oci_session_status=$(cat "${session_status_file}")
 
     if [[ "${oci_session_status}" == "valid" ]]
     then 
@@ -59,7 +66,8 @@ precmd() {
 # oshell initialization - update this path to match your installation
 # Replace /path/to/oshell with the actual path where you installed oshell
 export OSHELL_HOME=/path/to/oshell
-source $OSHELL_HOME/oshell.sh
+# shellcheck disable=SC1091
+source "$OSHELL_HOME/oshell.sh"
 
 # Available oshell commands:
 # ociauth <profile>       - Authenticate to OCI with the specified profile

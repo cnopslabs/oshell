@@ -224,29 +224,20 @@ function oci_tenancy_map() {
   # Header row
   printf "${BLUE}%-28s %-28s %-7s %-35s %-s${RESET}\n" "ENVIRONMENT" "TENANCY" "REALM" "COMPARTMENTS" "REGIONS"
 
-  # Print data rows
-  yq -o=json -e '.[]' "$yaml_file" | jq -c '.' | while read -r row; do
-    local env
-    env=$(echo "$row" | jq -r '.environment')
-    local tenancy
-    tenancy=$(echo "$row" | jq -r '.tenancy')
-    local realm
-    realm=$(echo "$row" | jq -r '.realm')
-    local comp
-    comp=$(echo "$row" | jq -r '.compartments')
-    local regions
-    regions=$(echo "$row" | jq -r '.regions')
-
+  # Read each row using yq and print formatted output
+  yq -r '.[] | [.environment, .tenancy, .realm, .compartments, .regions] | @tsv' "$yaml_file" | \
+  while IFS=$'\t' read -r env tenancy realm comp regions; do
     printf "${YELLOW}%-28s${RESET} %-28s %-7s %-35s %s\n" "$env" "$tenancy" "$realm" "$comp" "$regions"
   done
 
   # Footer message
-  printf "\nTo set Tenancy, Compartment, or Region export the %sOCI_TENANCY_NAME%s, %sOCI_COMPARTMENT%s, or %sOCI_CLI_REGION%s environment variables.\n\n" "${YELLOW}" "${RESET}" "${YELLOW}" "${RESET}" "${YELLOW}" "${RESET}"
+    printf "\nTo set Tenancy, Compartment, or Region export the \033[0;33mOCI_TENANCY_NAME\033[0m, \033[0;33mOCI_COMPARTMENT\033[0m, or \033[0;33mOCI_CLI_REGION\033[0m environment variables.\n\n"
 
-  printf "Or if using oshell, run:\n"
-  printf "oci_set_tenancy %sTENANCY_NAME%s\n" "${YELLOW}" "${RESET}"
-  printf "oci_set_tenancy %sTENANCY_NAME COMPARTMENT_NAME%s\n" "${YELLOW}" "${RESET}"
+    printf "Or if using oshell, run:\n"
+    printf "oci_set_tenancy \033[0;33mTENANCY_NAME\033[0m\n"
+    printf "oci_set_tenancy \033[0;33mTENANCY_NAME COMPARTMENT_NAME\033[0m\n"
 }
+
 
 alias ociclear='oci_env_clear'
 function oci_env_clear() {

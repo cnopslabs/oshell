@@ -3,6 +3,8 @@
 
 Helper shell utilities for OCI CLI and [oshiv](https://github.com/cnopslabs/oshiv). This tool simplifies working with multiple OCI tenancies, compartments, and profiles.
 
+![oshell setup demonstration](assets/oshell-setup.gif)
+
 ---
 
 ## Table of Contents

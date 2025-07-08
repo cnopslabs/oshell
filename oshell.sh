@@ -1,32 +1,37 @@
 #!/bin/zsh
 # shellcheck shell=bash disable=SC1071
 
-
-# Version: 0.1.0
+# Version: 0.1.1
 
 # Color definitions for terminal output
 CYAN='\033[0;96m'
 YELLOW='\033[;33m'
-# Check if TERM is set before using tput
+RED='\033[0;31m'
+
 if [[ -n "$TERM" ]]; then
   UNSET_FMT=$(tput sgr0)
 else
   UNSET_FMT='\033[0m'
 fi
-RED='\033[0;31m'
 
 # Configuration
 export PREEMPT_REFRESH_TIME=60  # Attempt to refresh 60 sec before session expiration
-LOG_LOCATION="${HOME}/.oci/sessions/${OCI_CLI_PROFILE}/oci-auth-refresher_${OCI_CLI_PROFILE}.log"
-SESSION_STATUS_FILE="${HOME}/.oci/sessions/${OCI_CLI_PROFILE}/session_status"
 
-# Ensure session directory exists
-mkdir -p "${HOME}/.oci/sessions/${OCI_CLI_PROFILE}"
+# Path variables (will be updated dynamically once OCI_CLI_PROFILE is set)
+LOG_LOCATION=""
+SESSION_STATUS_FILE=""
+
+# Set dynamic session paths after profile is set
+function set_profile_paths() {
+  LOG_LOCATION="${HOME}/.oci/sessions/${OCI_CLI_PROFILE}/oci-auth-refresher_${OCI_CLI_PROFILE}.log"
+  SESSION_STATUS_FILE="${HOME}/.oci/sessions/${OCI_CLI_PROFILE}/session_status"
+  mkdir -p "${HOME}/.oci/sessions/${OCI_CLI_PROFILE}"
+}
 
 # Helper function to log messages
 function log_message() {
   local message=$1
-  echo "$(date): $message" >> "$LOG_LOCATION" 2>&1 < /dev/null
+  echo "$(date '+%F %T'): $message" >> "$LOG_LOCATION" 2>&1 < /dev/null
 }
 
 # Helper function to find OCI auth refresher process for a specific profile
@@ -34,12 +39,9 @@ function find_oci_auth_refresher_process() {
   local profile=$1
   local found_pid=""
 
-  for r_pid in $(pgrep -f oci_auth_refresher.sh)
-  do
+  for r_pid in $(pgrep -f oci_auth_refresher.sh); do
     r_oci_profile=$(ps -p "$r_pid" -o command | grep -v COMMAND | awk '{print $3}')
-    if [[ $LOGLEVEL == "DEBUG" ]]; then
-      log_message "Existing refresher process: PID=$r_pid, PROFILE=$r_oci_profile"
-    fi
+    [[ $LOGLEVEL == "DEBUG" ]] && log_message "Existing refresher process: PID=$r_pid, PROFILE=$r_oci_profile"
     if [[ "$profile" == "$r_oci_profile" ]]; then
       found_pid=$r_pid
       break
@@ -56,13 +58,13 @@ function start_oci_auth_refresher() {
   if [[ $restart == "true" ]]; then
     log_message "Existing refresher process found for ${profile}, restarting..."
     kill -9 "$(find_oci_auth_refresher_process "$profile")"
-    # Set session status file path for this profile
-    local profile_session_status="${HOME}/.oci/sessions/${profile}/session_status"
-    echo "expired" > "$profile_session_status"
+    echo "expired" > "$SESSION_STATUS_FILE"
   else
     log_message "Starting new refresher process for ${profile}"
   fi
 
+  # Ensure OSHELL_HOME is exported so oci_auth_refresher.sh can source common functions
+  export OSHELL_HOME="${OSHELL_HOME:-$(dirname "$(realpath "$0")")}"
   nohup "${OSHELL_HOME}/oci_auth_refresher.sh" "$profile" > /dev/null 2>&1 < /dev/null &
   sleep 1
 }
@@ -83,6 +85,7 @@ function oci_authenticate() {
   unset OCI_CLI_TENANCY OCI_TENANCY_NAME OCI_COMPARTMENT CID OCI_CLI_REGION
   echo "Setting OCI Profile to ${profile_name}"
   export OCI_CLI_PROFILE=$profile_name
+  set_profile_paths
 
   log_message "Checking for existing refresher process for $OCI_CLI_PROFILE"
   local refresher_pid
@@ -99,24 +102,63 @@ function oci_authenticate() {
 
 alias ociexit='oci_auth_logout'
 function oci_auth_logout() {
-  if [[ -z "${OCI_CLI_PROFILE}" ]]; then
+  local profile_name="${1:-$OCI_CLI_PROFILE}"
+
+  if [[ -z "${profile_name}" ]]; then
     echo "No active OCI profile found. Nothing to log out from."
     return 0
   fi
 
+  # Temporarily set OCI_CLI_PROFILE to the provided profile for path setting
+  local original_profile="$OCI_CLI_PROFILE"
+  export OCI_CLI_PROFILE="$profile_name"
+  set_profile_paths
+
+  # Check if a refresher process exists and terminate it
   local refresher_pid
-  refresher_pid=$(find_oci_auth_refresher_process "$OCI_CLI_PROFILE")
+  refresher_pid=$(find_oci_auth_refresher_process "$profile_name")
+  local refresher_terminated=false
+
   if [[ -n "$refresher_pid" ]]; then
-    log_message "Killing refresher process for profile ${OCI_CLI_PROFILE}"
+    echo "Killing refresher process for profile ${CYAN}${profile_name}${UNSET_FMT}"
+    log_message "Killing refresher process for profile ${profile_name}"
     kill -9 "$refresher_pid"
     echo "expired" > "$SESSION_STATUS_FILE"
+    echo "Successfully terminated background refresher for profile: ${CYAN}${profile_name}${UNSET_FMT}"
+    refresher_terminated=true
+  else
+    echo "No background refresher found for profile: ${CYAN}${profile_name}${UNSET_FMT}"
   fi
 
-  if oci session terminate; then
-    echo "Successfully logged out from OCI profile: ${CYAN}${OCI_CLI_PROFILE}${UNSET_FMT}"
+  # Always attempt to terminate the session if we're working with the current active profile
+  if [[ "$profile_name" == "$original_profile" ]]; then
+    log_message "Attempting to terminate OCI session for profile ${profile_name}"
+
+    # Capture the output of the command in a variable
+    local terminate_output
+    terminate_output=$(oci session terminate --profile "$profile_name" 2>&1)
+    local terminate_status=$?
+
+    # Log the output
+    log_message "OCI session terminate output: ${terminate_output}"
+
+    if [[ $terminate_status -eq 0 ]]; then
+      log_message "Successfully terminated OCI session for profile ${profile_name}"
+      echo "Successfully logged out from OCI profile: ${CYAN}${profile_name}${UNSET_FMT}"
+    else
+      log_message "Failed to terminate OCI session for profile ${profile_name} (exit code: ${terminate_status})"
+      # Only show error message if we didn't terminate a refresher process
+      if [[ "$refresher_terminated" != "true" ]]; then
+        echo "Note: No active background refresher was found for this profile."
+        echo "If you're trying to terminate an OCI session, please ensure you have an active session first."
+      fi
+    fi
+
+    # Clear the environment variable after logout attempt
+    unset OCI_CLI_PROFILE
   else
-    echo "Failed to terminate OCI session for profile: ${CYAN}${OCI_CLI_PROFILE}${UNSET_FMT}"
-    return 1
+    # Restore the original profile if we were just killing a background refresher
+    export OCI_CLI_PROFILE="$original_profile"
   fi
 }
 
@@ -182,6 +224,7 @@ function oci_auth_status() {
     return 0
   fi
 
+  set_profile_paths
   echo "Checking session status for profile: ${CYAN}${OCI_CLI_PROFILE}${UNSET_FMT}"
   oci session validate --local
   local exit_code=$?
@@ -212,19 +255,15 @@ function oci_set_profile() {
 
   local profile_name=$1
 
+  export OCI_CLI_PROFILE=$profile_name
+  set_profile_paths
+
   if [[ ! -d "${HOME}/.oci/sessions/${profile_name}" ]]; then
     echo "Warning: Profile ${CYAN}${profile_name}${UNSET_FMT} does not exist or has not been authenticated"
     echo "You may need to run: ociauth ${profile_name}"
   fi
 
   echo "Setting OCI_CLI_PROFILE to ${CYAN}${profile_name}${UNSET_FMT}"
-  export OCI_CLI_PROFILE=$profile_name
-  LOG_LOCATION="${HOME}/.oci/sessions/${OCI_CLI_PROFILE}/oci-auth-refresher_${OCI_CLI_PROFILE}.log"
-  SESSION_STATUS_FILE="${HOME}/.oci/sessions/${OCI_CLI_PROFILE}/session_status"
-
-  # Ensure session directory exists
-  mkdir -p "${HOME}/.oci/sessions/${OCI_CLI_PROFILE}"
-
   echo ""
   oshiv info
 }
@@ -242,16 +281,12 @@ function oci_list_profiles() {
   local profile_count=0
   echo "${CYAN}Profiles:${UNSET_FMT}"
 
-  # Store status files in an array to avoid subshell issues
-  # Using a more compatible approach instead of mapfile (which is Bash-specific)
   local status_files=()
   while IFS= read -r line; do
     status_files+=("$line")
   done < <(find "$sessions_dir" -name "session_status" 2>/dev/null)
 
-  # Process each status file
-  for status_file in "${status_files[@]}"
-  do
+  for status_file in "${status_files[@]}"; do
     local session_status
     session_status=$(cat "$status_file")
     local profile_name

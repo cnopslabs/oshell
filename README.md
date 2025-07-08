@@ -18,6 +18,19 @@ Helper shell utilities for OCI CLI and [oshiv](https://github.com/cnopslabs/oshi
 - [Usage](#usage)
    - [Commands List](#commands-list)
    - [Authenticate to OCI](#authenticate-to-oci)
+   - [Set Tenancy and Compartment](#set-tenancy-and-compartment)
+   - [Switch Between Profiles](#switch-between-profiles)
+   - [Check Session Status](#check-session-status)
+   - [List Available Profiles](#list-available-profiles)
+   - [Manage Environment Variables](#manage-environment-variables)
+   - [Log Out](#log-out)
+- [Using with oshiv](#using-with-oshiv)
+- [Shell Integration](#shell-integration)
+- [Authentication Lifecycle Management](#authentication-lifecycle-management)
+   - [Authentication Process](#authentication-process)
+   - [Session Maintenance](#session-maintenance)
+   - [Terminating Sessions](#terminating-sessions)
+   - [Logs and Monitoring](#logs-and-monitoring)
 - [Troubleshooting and Setup Fix](#troubleshooting-and-setup-fix)
 
 ---
@@ -136,7 +149,7 @@ oshell provides several commands to manage your OCI authentication and environme
 | Command | Alias | Description |
 |---------|-------|-------------|
 | `oci_authenticate [profile]` | `ociauth` | Authenticate to OCI with the specified profile |
-| `oci_auth_logout` | `ociexit` | Log out of the current OCI session |
+| `oci_auth_logout [profile]` | `ociexit [profile]` | Log out of the current OCI session or terminate a specific profile's background refresher |
 | `oci_set_profile <profile>` | `ociset` | Set the current OCI profile |
 | `oci_set_tenancy <tenancy> [compartment]` | `ocisettenancy` | Set the current tenancy and optional compartment |
 | `oci_env_print` | `ocienv` | Display OCI environment variables |
@@ -277,9 +290,14 @@ ociclear
 ### Log Out
 
 ```bash
-# Terminate the current session
+# Terminate the current active profile
 ociexit
+
+# Terminate a specific profile (even if it's not the active one)
+ociexit PROFILE_NAME
 ```
+
+For more details on session termination and background refresher management, see the [Terminating Sessions](#terminating-sessions) section.
 
 ## Using with oshiv
 
@@ -327,9 +345,73 @@ When properly configured, your prompt will show:
 
 ---
 
-## How It Works
+## Authentication Lifecycle Management
 
-oshell includes an authentication refresher that runs in the background to keep your OCI sessions active. The refresher automatically refreshes your session before it expires, so you don't have to re-authenticate manually.
+oshell provides a complete lifecycle management for OCI authentication:
+
+### Authentication Process
+
+1. **Authentication Initiation**: When you run `ociauth [profile]`, oshell authenticates with OCI using the specified profile (or DEFAULT if none is provided).
+
+2. **Background Refresher**: After successful authentication, oshell automatically starts a background process (`oci_auth_refresher.sh`) that keeps your session alive by refreshing it before it expires.
+
+3. **Multiple Profiles**: You can authenticate with multiple profiles simultaneously. Each profile gets its own background refresher process.
+
+### Session Maintenance
+
+- The background refresher continuously monitors your session's expiration time.
+- It automatically refreshes the session shortly before it expires (default: 60 seconds).
+- This happens silently in the background, allowing you to work without interruption.
+- You can check the status of your session with `ocistat`.
+
+### Terminating Sessions
+
+The `ociexit` command has been enhanced to provide better control over session termination:
+
+```bash
+# Terminate the current active profile
+ociexit
+
+# Terminate a specific profile (even if it's not the active one)
+ociexit PROFILE_NAME
+```
+
+When you run `ociexit`:
+
+1. It terminates the background refresher process for the specified profile.
+2. If terminating the current active profile, it also:
+   - Attempts to terminate the OCI session using the `oci session terminate` command
+   - Clears the OCI_CLI_PROFILE environment variable
+
+Note: The command has been improved to handle various edge cases gracefully:
+- If no background refresher is found for the profile, it will display a clear message indicating no active refresher was found
+- If a background refresher is terminated but session termination fails, it will still report success for the primary operation
+- When no active session exists, the command provides helpful guidance instead of misleading error messages
+- Session termination errors are logged but only displayed to the user when relevant to the operation
+
+This allows you to:
+- Log out completely from your current profile
+- Terminate background refreshers for other profiles without switching to them
+- Manage multiple authentication sessions efficiently
+
+### Logs and Monitoring
+
+- Each profile's refresher logs are stored at: `$HOME/.oci/sessions/PROFILE_NAME/oci-auth-refresher_PROFILE_NAME.log`
+- You can check if a refresher is running with: `pgrep -af oci_auth_refresher.sh`
+- The session status is stored at: `$HOME/.oci/sessions/PROFILE_NAME/session_status`
+
+#### Log File Contents
+
+The log file contains detailed information about the authentication refresher's activities:
+
+- Session validation attempts and results
+- Refresh operations and their outcomes
+- Session expiration timestamps and remaining time calculations
+- Error messages and troubleshooting information
+
+All profiles (DEFAULT and custom profiles) now have consistent logging behavior, making it easier to troubleshoot issues across different profiles. Each profile's log follows the same format and includes the same level of detail.
+
+When troubleshooting issues with authentication or session management, checking these logs is often the first step to understanding what's happening behind the scenes.
 
 ---
 

@@ -71,7 +71,7 @@ function start_oci_auth_refresher() {
 
 alias ociauth='oci_authenticate'
 function oci_authenticate() {
-  oci_tenancy_map
+  oci_tenancy_map "$@"
   echo ""
 
   local profile_name="${1:-DEFAULT}"
@@ -97,7 +97,7 @@ function oci_authenticate() {
     start_oci_auth_refresher "$OCI_CLI_PROFILE" "false"
   fi
 
-  oci_tenancy_map
+  oci_tenancy_map "$@"
 }
 
 alias ociexit='oci_auth_logout'
@@ -222,25 +222,30 @@ function oci_tenancy_map() {
   local RESET='\033[0m'
 
   # Header row
-  printf "${BLUE}%-18s %-20s %-5s %-20s %-s${RESET}\n" "ENVIRONMENT" "TENANCY" "REALM" "COMPARTMENTS" "REGIONS"
+  printf "${BLUE}%-28s %-28s %-7s %-35s %-s${RESET}\n" "ENVIRONMENT" "TENANCY" "REALM" "COMPARTMENTS" "REGIONS"
 
   # Print data rows
   yq -o=json -e '.[]' "$yaml_file" | jq -c '.' | while read -r row; do
-    local env=$(echo "$row" | jq -r '.environment')
-    local tenancy=$(echo "$row" | jq -r '.tenancy')
-    local realm=$(echo "$row" | jq -r '.realm')
-    local comp=$(echo "$row" | jq -r '.compartments')
-    local regions=$(echo "$row" | jq -r '.regions')
+    local env
+    env=$(echo "$row" | jq -r '.environment')
+    local tenancy
+    tenancy=$(echo "$row" | jq -r '.tenancy')
+    local realm
+    realm=$(echo "$row" | jq -r '.realm')
+    local comp
+    comp=$(echo "$row" | jq -r '.compartments')
+    local regions
+    regions=$(echo "$row" | jq -r '.regions')
 
-    printf "${YELLOW}%-18s${RESET} %-20s %-5s %-20s %s\n" "$env" "$tenancy" "$realm" "$comp" "$regions"
+    printf "${YELLOW}%-28s${RESET} %-28s %-7s %-35s %s\n" "$env" "$tenancy" "$realm" "$comp" "$regions"
   done
 
   # Footer message
-  printf "\nTo set Tenancy, Compartment, or Region export the ${YELLOW}OCI_TENANCY_NAME${RESET}, ${YELLOW}OCI_COMPARTMENT${RESET}, or ${YELLOW}OCI_CLI_REGION${RESET} environment variables.\n\n"
+  printf "\nTo set Tenancy, Compartment, or Region export the %sOCI_TENANCY_NAME%s, %sOCI_COMPARTMENT%s, or %sOCI_CLI_REGION%s environment variables.\n\n" "${YELLOW}" "${RESET}" "${YELLOW}" "${RESET}" "${YELLOW}" "${RESET}"
 
   printf "Or if using oshell, run:\n"
-  printf "oci_set_tenancy ${YELLOW}TENANCY_NAME${RESET}\n"
-  printf "oci_set_tenancy ${YELLOW}TENANCY_NAME COMPARTMENT_NAME${RESET}\n"
+  printf "oci_set_tenancy %sTENANCY_NAME%s\n" "${YELLOW}" "${RESET}"
+  printf "oci_set_tenancy %sTENANCY_NAME COMPARTMENT_NAME%s\n" "${YELLOW}" "${RESET}"
 }
 
 alias ociclear='oci_env_clear'
@@ -307,7 +312,7 @@ function oci_set_profile() {
 
   echo "Setting OCI_CLI_PROFILE to ${CYAN}${profile_name}${UNSET_FMT}"
   echo ""
-  oci_tenancy_map
+  oci_tenancy_map "$@"
 }
 
 alias ocilistprofiles='oci_list_profiles'
@@ -383,6 +388,7 @@ lookup_tenancy_info() {
     result=$(grep -A 4 "tenancy: $tname" "$HOME/.oci/tenancy-map.yaml" | grep "compartments" | awk '{$1=""; print $0}' | xargs)
   else
     # Use yq for other fields
+    # shellcheck disable=SC2016  # $tn and $f are jq variables, not shell variables
     result=$(yq -r --arg tn "$tname" --arg f "$field" \
       'map(select(.tenancy == $tn))[0][$f] // ""' \
       "$HOME/.oci/tenancy-map.yaml" 2>/dev/null)

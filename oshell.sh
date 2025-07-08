@@ -71,11 +71,11 @@ function start_oci_auth_refresher() {
 
 alias ociauth='oci_authenticate'
 function oci_authenticate() {
-  oshiv info
+  oci_tenancy_map
   echo ""
 
   local profile_name="${1:-DEFAULT}"
-  printf "Using profile: %s%s%s\n" "${CYAN}" "${profile_name}" "${UNSET_FMT}"
+  echo -e "Using profile: ${CYAN}${profile_name}${UNSET_FMT}"
 
   if ! oci session authenticate --profile-name "$profile_name"; then
     echo "OCI authentication failed"
@@ -97,7 +97,7 @@ function oci_authenticate() {
     start_oci_auth_refresher "$OCI_CLI_PROFILE" "false"
   fi
 
-  oshiv info
+  oci_tenancy_map
 }
 
 alias ociexit='oci_auth_logout'
@@ -182,7 +182,7 @@ function oci_set_tenancy() {
   fi
 
   echo ""
-  oshiv config
+  oci_config_print
   return 0
 }
 
@@ -199,6 +199,48 @@ function oci_env_print() {
   fi
 
   return 0
+}
+
+# Display OCI tenancy map with formatted colors
+alias ocimap='oci_tenancy_map'
+function oci_tenancy_map() {
+  local yaml_file="${1:-$HOME/.oci/tenancy-map.yaml}"
+
+  if [[ ! -f "$yaml_file" ]]; then
+    echo "❌ Cannot find tenancy map at: $yaml_file" >&2
+    return 1
+  fi
+
+  if ! command -v yq >/dev/null 2>&1; then
+    echo "❌ 'yq' is required (brew install yq)" >&2
+    return 1
+  fi
+
+  # Color definitions
+  local BLUE='\033[1;34m'
+  local YELLOW='\033[0;33m'
+  local RESET='\033[0m'
+
+  # Header row
+  printf "${BLUE}%-18s %-20s %-5s %-20s %-s${RESET}\n" "ENVIRONMENT" "TENANCY" "REALM" "COMPARTMENTS" "REGIONS"
+
+  # Print data rows
+  yq -o=json -e '.[]' "$yaml_file" | jq -c '.' | while read -r row; do
+    local env=$(echo "$row" | jq -r '.environment')
+    local tenancy=$(echo "$row" | jq -r '.tenancy')
+    local realm=$(echo "$row" | jq -r '.realm')
+    local comp=$(echo "$row" | jq -r '.compartments')
+    local regions=$(echo "$row" | jq -r '.regions')
+
+    printf "${YELLOW}%-18s${RESET} %-20s %-5s %-20s %s\n" "$env" "$tenancy" "$realm" "$comp" "$regions"
+  done
+
+  # Footer message
+  printf "\nTo set Tenancy, Compartment, or Region export the ${YELLOW}OCI_TENANCY_NAME${RESET}, ${YELLOW}OCI_COMPARTMENT${RESET}, or ${YELLOW}OCI_CLI_REGION${RESET} environment variables.\n\n"
+
+  printf "Or if using oshell, run:\n"
+  printf "oci_set_tenancy ${YELLOW}TENANCY_NAME${RESET}\n"
+  printf "oci_set_tenancy ${YELLOW}TENANCY_NAME COMPARTMENT_NAME${RESET}\n"
 }
 
 alias ociclear='oci_env_clear'
@@ -265,7 +307,7 @@ function oci_set_profile() {
 
   echo "Setting OCI_CLI_PROFILE to ${CYAN}${profile_name}${UNSET_FMT}"
   echo ""
-  oshiv info
+  oci_tenancy_map
 }
 
 alias ocilistprofiles='oci_list_profiles'
@@ -313,4 +355,50 @@ function oci_list_profiles() {
   fi
 
   return 0
+}
+# ---------- Color & helper ----------
+YELLOW='\033[0;33m'
+RESET='\033[0m'
+
+print_kv() {        # key-value with yellow value
+  printf "%-14s: ${YELLOW}%s${RESET}\n" "$1" "$2"
+}
+
+# Resolve default compartment from tenancy-map.yaml
+lookup_tenancy_info() {
+  local tname=$1 field=$2
+  [[ -z "$tname" ]] && return        # nothing to look up
+  command -v yq >/dev/null 2>&1 || return
+
+  # Use grep to check if the tenancy exists in the YAML file
+  if ! grep -q "tenancy: $tname" "$HOME/.oci/tenancy-map.yaml"; then
+    echo "Warning: Tenancy '$tname' not found in tenancy-map.yaml. Please check your tenancy-map.yaml file." >&2
+    return
+  fi
+
+  # Get the requested field using grep and awk for better reliability
+  local result
+  if [[ "$field" == "compartments" ]]; then
+    # Extract the compartments for the specified tenancy
+    result=$(grep -A 4 "tenancy: $tname" "$HOME/.oci/tenancy-map.yaml" | grep "compartments" | awk '{$1=""; print $0}' | xargs)
+  else
+    # Use yq for other fields
+    result=$(yq -r --arg tn "$tname" --arg f "$field" \
+      'map(select(.tenancy == $tn))[0][$f] // ""' \
+      "$HOME/.oci/tenancy-map.yaml" 2>/dev/null)
+  fi
+
+  echo "$result"
+}
+
+oci_config_print() {
+  local tenancy_name=${OCI_TENANCY_NAME:-}
+  local compartment=${OCI_COMPARTMENT:-}
+
+  # If no compartment is set, try to get it from the tenancy map
+  [[ -n "$tenancy_name" && -z "$compartment" ]] \
+    && compartment=$(lookup_tenancy_info "$tenancy_name" compartments)
+
+  print_kv "Tenancy name" "${tenancy_name:-<unset>}"
+  print_kv "Compartment"  "${compartment:-<unset>}"
 }

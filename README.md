@@ -1,7 +1,7 @@
 # oshell
 [![CI](https://github.com/cnopslabs/oshell/actions/workflows/ci.yml/badge.svg)](https://github.com/cnopslabs/oshell/actions/workflows/ci.yml)
 
-Helper shell utilities for OCI CLI and [oshiv](https://github.com/cnopslabs/oshiv). This tool simplifies working with multiple OCI tenancies, compartments, and profiles.
+Independent shell utilities for OCI CLI that simplifies working with multiple OCI tenancies, compartments, and profiles. Can be used as a companion to [oshiv](https://github.com/cnopslabs/oshiv).
 
 ![oshell setup demonstration](assets/oshell-setup.gif)
 
@@ -12,7 +12,6 @@ Helper shell utilities for OCI CLI and [oshiv](https://github.com/cnopslabs/oshi
 - [Features](#features)
 - [Prerequisites](#prerequisites)
    - [OCI CLI](#oci-cli)
-   - [oshiv](#oshiv)
 - [Installation](#installation)
    - [1. Clone this repository](#1-clone-this-repository)
    - [2. Configure Tenancy Map (Recommended)](#2-configure-tenancy-map-recommended)
@@ -26,7 +25,7 @@ Helper shell utilities for OCI CLI and [oshiv](https://github.com/cnopslabs/oshi
    - [List Available Profiles](#list-available-profiles)
    - [Manage Environment Variables](#manage-environment-variables)
    - [Log Out](#log-out)
-- [Using with oshiv](#using-with-oshiv)
+- [Using with oshiv (Optional)](#using-with-oshiv-optional)
 - [Shell Integration](#shell-integration)
 - [Authentication Lifecycle Management](#authentication-lifecycle-management)
    - [Authentication Process](#authentication-process)
@@ -53,11 +52,6 @@ The Oracle Cloud Infrastructure Command Line Interface (OCI CLI) is required.
 
 [Install OCI CLI](https://docs.oracle.com/en-us/iaas/Content/API/SDKDocs/cliinstall.htm)
 
-### oshiv
-
-oshiv is a companion tool that provides simplified OCI resource management.
-
-[Install oshiv](https://github.com/cnopslabs/oshiv#install-oshiv)
 
 ## Installation
 
@@ -69,7 +63,7 @@ git clone https://github.com/cnopslabs/oshell
 
 ### 2. Configure Tenancy Map (Recommended)
 
-Create an OCI tenancy mappings file. The tenancy map allows `oshiv` to quickly print the tenant and compartment details you use most often.
+Create an OCI tenancy mappings file. The tenancy map allows oshell to quickly print the tenant and compartment details you use most often.
 
 ```bash
 cp tenancy-map.yaml $HOME/.oci
@@ -301,9 +295,9 @@ ociexit PROFILE_NAME
 
 For more details on session termination and background refresher management, see the [Terminating Sessions](#terminating-sessions) section.
 
-## Using with oshiv
+## Using with oshiv (Optional)
 
-After setting up your tenancy and compartment with oshell, you can use oshiv to manage OCI resources:
+While oshell works independently, it can also be used as a companion to oshiv. If you have oshiv installed, after setting up your tenancy and compartment with oshell, you can use oshiv to manage OCI resources:
 
 ```bash
 # List instances matching "home" in their name

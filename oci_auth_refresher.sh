@@ -53,7 +53,19 @@ else
   # Helper function to log messages
   function log_message() {
     local message=$1
-    echo "$(date '+%F %T'): $message" >> "$LOG_LOCATION" 2>&1 < /dev/null
+
+    # Check if LOG_LOCATION is set and create directory if needed
+    if [[ -n "$LOG_LOCATION" ]]; then
+      local log_dir
+      log_dir=$(dirname "$LOG_LOCATION")
+
+      # Create directory if it doesn't exist
+      if [[ ! -d "$log_dir" ]]; then
+        mkdir -p "$log_dir"
+      fi
+
+      echo "$(date '+%F %T'): $message" >> "$LOG_LOCATION" 2>&1 < /dev/null
+    fi
   }
 fi
 

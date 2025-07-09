@@ -14,6 +14,9 @@ else
   UNSET_FMT='\033[0m'
 fi
 
+# Ensure OSHELL_HOME is exported so oci_auth_refresher.sh can source common functions
+export OSHELL_HOME="${OSHELL_HOME:-$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)}"
+
 # Configuration
 export PREEMPT_REFRESH_TIME=60  # Attempt to refresh 60 sec before session expiration
 
@@ -31,12 +34,18 @@ function set_profile_paths() {
 # Helper function to log messages
 function log_message() {
   local message=$1
-  # Check if LOG_LOCATION is set and the directory exists
-  if [[ -n "$LOG_LOCATION" && -d "$(dirname "$LOG_LOCATION")" ]]; then
+
+  # Check if LOG_LOCATION is set and create directory if needed
+  if [[ -n "$LOG_LOCATION" ]]; then
+    local log_dir
+    log_dir=$(dirname "$LOG_LOCATION")
+
+    # Create directory if it doesn't exist
+    if [[ ! -d "$log_dir" ]]; then
+      mkdir -p "$log_dir"
+    fi
+
     echo "$(date '+%F %T'): $message" >> "$LOG_LOCATION" 2>&1 < /dev/null
-  else
-    # If we can't log to file, just print to stderr for debugging
-    >&2 echo "log_message: $(date '+%F %T'): $message"
   fi
 }
 
@@ -69,8 +78,6 @@ function start_oci_auth_refresher() {
     log_message "Starting new refresher process for ${profile}"
   fi
 
-  # Ensure OSHELL_HOME is exported so oci_auth_refresher.sh can source common functions
-  export OSHELL_HOME="${OSHELL_HOME:-$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)}"
   log_message "Oshell home: ${OSHELL_HOME}"
   nohup "${OSHELL_HOME}/oci_auth_refresher.sh" "$profile" > /dev/null 2>&1 < /dev/null &
   sleep 1
@@ -269,14 +276,6 @@ function oci_auth_status() {
   fi
 
   set_profile_paths
-
-  # Check if the profile directory exists
-  if [[ ! -d "${HOME}/.oci/sessions/${OCI_CLI_PROFILE}" ]]; then
-    echo "Profile directory for ${CYAN}${OCI_CLI_PROFILE}${UNSET_FMT} does not exist."
-    echo "You may need to authenticate first with: ociauth ${OCI_CLI_PROFILE}"
-    return 1
-  fi
-
   echo "Checking session status for profile: ${CYAN}${OCI_CLI_PROFILE}${UNSET_FMT}"
   oci session validate --local
   local exit_code=$?
@@ -333,22 +332,17 @@ function oci_list_profiles() {
   local profile_count=0
   echo "${CYAN}Profiles:${UNSET_FMT}"
 
-  # Get all profile directories
-  local profile_dirs=()
+  local status_files=()
   while IFS= read -r line; do
-    profile_dirs+=("$line")
-  done < <(find "$sessions_dir" -mindepth 1 -maxdepth 1 -type d 2>/dev/null)
+    status_files+=("$line")
+  done < <(find "$sessions_dir" -name "session_status" 2>/dev/null)
 
-  for profile_dir in "${profile_dirs[@]}"; do
+  for status_file in "${status_files[@]}"; do
+    local session_status
+    session_status=$(cat "$status_file")
     local profile_name
-    profile_name=$(basename "$profile_dir")
+    profile_name=$(echo "$status_file" | awk -F"/" '{print $6}')
     profile_count=$((profile_count + 1))
-
-    # Check if session_status file exists
-    local session_status="unknown"
-    if [[ -f "$profile_dir/session_status" ]]; then
-      session_status=$(cat "$profile_dir/session_status")
-    fi
 
     if [[ "$profile_name" == "$OCI_CLI_PROFILE" ]]; then
       if [[ "$session_status" == "expired" ]]; then

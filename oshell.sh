@@ -269,6 +269,14 @@ function oci_auth_status() {
   fi
 
   set_profile_paths
+
+  # Check if the profile directory exists
+  if [[ ! -d "${HOME}/.oci/sessions/${OCI_CLI_PROFILE}" ]]; then
+    echo "Profile directory for ${CYAN}${OCI_CLI_PROFILE}${UNSET_FMT} does not exist."
+    echo "You may need to authenticate first with: ociauth ${OCI_CLI_PROFILE}"
+    return 1
+  fi
+
   echo "Checking session status for profile: ${CYAN}${OCI_CLI_PROFILE}${UNSET_FMT}"
   oci session validate --local
   local exit_code=$?
@@ -325,17 +333,22 @@ function oci_list_profiles() {
   local profile_count=0
   echo "${CYAN}Profiles:${UNSET_FMT}"
 
-  local status_files=()
+  # Get all profile directories
+  local profile_dirs=()
   while IFS= read -r line; do
-    status_files+=("$line")
-  done < <(find "$sessions_dir" -name "session_status" 2>/dev/null)
+    profile_dirs+=("$line")
+  done < <(find "$sessions_dir" -mindepth 1 -maxdepth 1 -type d 2>/dev/null)
 
-  for status_file in "${status_files[@]}"; do
-    local session_status
-    session_status=$(cat "$status_file")
+  for profile_dir in "${profile_dirs[@]}"; do
     local profile_name
-    profile_name=$(echo "$status_file" | awk -F"/" '{print $6}')
+    profile_name=$(basename "$profile_dir")
     profile_count=$((profile_count + 1))
+
+    # Check if session_status file exists
+    local session_status="unknown"
+    if [[ -f "$profile_dir/session_status" ]]; then
+      session_status=$(cat "$profile_dir/session_status")
+    fi
 
     if [[ "$profile_name" == "$OCI_CLI_PROFILE" ]]; then
       if [[ "$session_status" == "expired" ]]; then

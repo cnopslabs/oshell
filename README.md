@@ -1,7 +1,9 @@
 # oshell
 [![CI](https://github.com/cnopslabs/oshell/actions/workflows/ci.yml/badge.svg)](https://github.com/cnopslabs/oshell/actions/workflows/ci.yml)
 
-Helper shell utilities for OCI CLI and [oshiv](https://github.com/cnopslabs/oshiv). This tool simplifies working with multiple OCI tenancies, compartments, and profiles.
+Independent shell utilities for OCI CLI that simplifies working with multiple OCI tenancies, compartments, and profiles. Can be used as a companion to [oshiv](https://github.com/cnopslabs/oshiv).
+
+![oshell setup demonstration](assets/oshell-setup.gif)
 
 ---
 
@@ -10,7 +12,6 @@ Helper shell utilities for OCI CLI and [oshiv](https://github.com/cnopslabs/oshi
 - [Features](#features)
 - [Prerequisites](#prerequisites)
    - [OCI CLI](#oci-cli)
-   - [oshiv](#oshiv)
 - [Installation](#installation)
    - [1. Clone this repository](#1-clone-this-repository)
    - [2. Configure Tenancy Map (Recommended)](#2-configure-tenancy-map-recommended)
@@ -18,6 +19,19 @@ Helper shell utilities for OCI CLI and [oshiv](https://github.com/cnopslabs/oshi
 - [Usage](#usage)
    - [Commands List](#commands-list)
    - [Authenticate to OCI](#authenticate-to-oci)
+   - [Set Tenancy and Compartment](#set-tenancy-and-compartment)
+   - [Switch Between Profiles](#switch-between-profiles)
+   - [Check Session Status](#check-session-status)
+   - [List Available Profiles](#list-available-profiles)
+   - [Manage Environment Variables](#manage-environment-variables)
+   - [Log Out](#log-out)
+- [Using with oshiv (Optional)](#using-with-oshiv-optional)
+- [Shell Integration](#shell-integration)
+- [Authentication Lifecycle Management](#authentication-lifecycle-management)
+   - [Authentication Process](#authentication-process)
+   - [Session Maintenance](#session-maintenance)
+   - [Terminating Sessions](#terminating-sessions)
+   - [Logs and Monitoring](#logs-and-monitoring)
 - [Troubleshooting and Setup Fix](#troubleshooting-and-setup-fix)
 
 ---
@@ -38,11 +52,6 @@ The Oracle Cloud Infrastructure Command Line Interface (OCI CLI) is required.
 
 [Install OCI CLI](https://docs.oracle.com/en-us/iaas/Content/API/SDKDocs/cliinstall.htm)
 
-### oshiv
-
-oshiv is a companion tool that provides simplified OCI resource management.
-
-[Install oshiv](https://github.com/cnopslabs/oshiv#install-oshiv)
 
 ## Installation
 
@@ -54,7 +63,7 @@ git clone https://github.com/cnopslabs/oshell
 
 ### 2. Configure Tenancy Map (Recommended)
 
-Create an OCI tenancy mappings file. The tenancy map allows `oshiv` to quickly print the tenant and compartment details you use most often.
+Create an OCI tenancy mappings file. The tenancy map allows oshell to quickly print the tenant and compartment details you use most often.
 
 ```bash
 cp tenancy-map.yaml $HOME/.oci
@@ -113,7 +122,7 @@ Update your ZSH initialization file (`$HOME/.zshrc`) with:
 ```bash
 # Set the path to your oshell installation
 export OSHELL_HOME=/path/to/oshell
-source $OSHELL_HOME/oshell.sh
+source "$OSHELL_HOME/oshell.sh"
 ```
 
 <details>
@@ -123,7 +132,7 @@ source $OSHELL_HOME/oshell.sh
 # oshell configuration
 # Replace /path/to/oshell with the actual path where you installed oshell
 export OSHELL_HOME=/path/to/oshell
-source $OSHELL_HOME/oshell.sh
+source "$OSHELL_HOME/oshell.sh"
 ```
 
 For shell prompt integration, see the included `.zshrc_EXAMPLE.sh` file.
@@ -136,7 +145,7 @@ oshell provides several commands to manage your OCI authentication and environme
 | Command | Alias | Description |
 |---------|-------|-------------|
 | `oci_authenticate [profile]` | `ociauth` | Authenticate to OCI with the specified profile |
-| `oci_auth_logout` | `ociexit` | Log out of the current OCI session |
+| `oci_auth_logout [profile]` | `ociexit [profile]` | Log out of the current OCI session or terminate a specific profile's background refresher |
 | `oci_set_profile <profile>` | `ociset` | Set the current OCI profile |
 | `oci_set_tenancy <tenancy> [compartment]` | `ocisettenancy` | Set the current tenancy and optional compartment |
 | `oci_env_print` | `ocienv` | Display OCI environment variables |
@@ -277,13 +286,18 @@ ociclear
 ### Log Out
 
 ```bash
-# Terminate the current session
+# Terminate the current active profile
 ociexit
+
+# Terminate a specific profile (even if it's not the active one)
+ociexit PROFILE_NAME
 ```
 
-## Using with oshiv
+For more details on session termination and background refresher management, see the [Terminating Sessions](#terminating-sessions) section.
 
-After setting up your tenancy and compartment with oshell, you can use oshiv to manage OCI resources:
+## Using with oshiv (Optional)
+
+While oshell works independently, it can also be used as a companion to oshiv. If you have oshiv installed, after setting up your tenancy and compartment with oshell, you can use oshiv to manage OCI resources:
 
 ```bash
 # List instances matching "home" in their name
@@ -327,9 +341,73 @@ When properly configured, your prompt will show:
 
 ---
 
-## How It Works
+## Authentication Lifecycle Management
 
-oshell includes an authentication refresher that runs in the background to keep your OCI sessions active. The refresher automatically refreshes your session before it expires, so you don't have to re-authenticate manually.
+oshell provides a complete lifecycle management for OCI authentication:
+
+### Authentication Process
+
+1. **Authentication Initiation**: When you run `ociauth [profile]`, oshell authenticates with OCI using the specified profile (or DEFAULT if none is provided).
+
+2. **Background Refresher**: After successful authentication, oshell automatically starts a background process (`oci_auth_refresher.sh`) that keeps your session alive by refreshing it before it expires.
+
+3. **Multiple Profiles**: You can authenticate with multiple profiles simultaneously. Each profile gets its own background refresher process.
+
+### Session Maintenance
+
+- The background refresher continuously monitors your session's expiration time.
+- It automatically refreshes the session shortly before it expires (default: 60 seconds).
+- This happens silently in the background, allowing you to work without interruption.
+- You can check the status of your session with `ocistat`.
+
+### Terminating Sessions
+
+The `ociexit` command has been enhanced to provide better control over session termination:
+
+```bash
+# Terminate the current active profile
+ociexit
+
+# Terminate a specific profile (even if it's not the active one)
+ociexit PROFILE_NAME
+```
+
+When you run `ociexit`:
+
+1. It terminates the background refresher process for the specified profile.
+2. If terminating the current active profile, it also:
+   - Attempts to terminate the OCI session using the `oci session terminate` command
+   - Clears the OCI_CLI_PROFILE environment variable
+
+Note: The command has been improved to handle various edge cases gracefully:
+- If no background refresher is found for the profile, it will display a clear message indicating no active refresher was found
+- If a background refresher is terminated but session termination fails, it will still report success for the primary operation
+- When no active session exists, the command provides helpful guidance instead of misleading error messages
+- Session termination errors are logged but only displayed to the user when relevant to the operation
+
+This allows you to:
+- Log out completely from your current profile
+- Terminate background refreshers for other profiles without switching to them
+- Manage multiple authentication sessions efficiently
+
+### Logs and Monitoring
+
+- Each profile's refresher logs are stored at: `$HOME/.oci/sessions/PROFILE_NAME/oci-auth-refresher_PROFILE_NAME.log`
+- You can check if a refresher is running with: `pgrep -af oci_auth_refresher.sh`
+- The session status is stored at: `$HOME/.oci/sessions/PROFILE_NAME/session_status`
+
+#### Log File Contents
+
+The log file contains detailed information about the authentication refresher's activities:
+
+- Session validation attempts and results
+- Refresh operations and their outcomes
+- Session expiration timestamps and remaining time calculations
+- Error messages and troubleshooting information
+
+All profiles (DEFAULT and custom profiles) now have consistent logging behavior, making it easier to troubleshoot issues across different profiles. Each profile's log follows the same format and includes the same level of detail.
+
+When troubleshooting issues with authentication or session management, checking these logs is often the first step to understanding what's happening behind the scenes.
 
 ---
 
@@ -357,7 +435,7 @@ The `OSHELL_HOME` environment variable must point to the directory containing `o
 
 1. Check the value of `$OSHELL_HOME`:
    ```bash
-   echo $OSHELL_HOME
+   echo "$OSHELL_HOME"
    ```
 
 2. If it's not set or is incorrect, set it to the directory where `oshell` is installed. For example:
@@ -376,13 +454,13 @@ The `OSHELL_HOME` environment variable must point to the directory containing `o
 Verify that `oci_auth_refresher.sh` exists in the `$OSHELL_HOME` directory:
 
 ```bash
-ls -l ${OSHELL_HOME}/oci_auth_refresher.sh
+ls -l "${OSHELL_HOME}/oci_auth_refresher.sh"
 ```
 
 - If the file is missing, download or pull the latest version of this repository.
 - If the file is present but not executable, make sure it has the correct permissions:
   ```bash
-  chmod +x ${OSHELL_HOME}/oci_auth_refresher.sh
+  chmod +x "${OSHELL_HOME}/oci_auth_refresher.sh"
   ```
 
 ---
@@ -419,7 +497,7 @@ If no results are shown, try the script troubleshooting steps again.
 If the refresher fails to start or exits prematurely, review the log file for details:
 
 ```bash
-cat ~/Library/Logs/oci-auth-refresher_<profile-name>.log
+cat ${HOME}/.oci/sessions/<profile-name>/oci-auth-refresher_<profile-name>.log
 ```
 
 Replace `<profile-name>` with the appropriate profile (e.g., `DEFAULT`).
@@ -441,14 +519,14 @@ If the OCI CLI is not installed, follow the [installation guide](https://docs.or
 
 1. Verify the `$OSHELL_HOME` environment variable:
    ```bash
-   echo $OSHELL_HOME
+   echo "$OSHELL_HOME"
    export OSHELL_HOME=/path/to/oshell
    ```
 
 2. Ensure `oci_auth_refresher.sh` exists and is executable:
    ```bash
-   ls -l ${OSHELL_HOME}/oci_auth_refresher.sh
-   chmod +x ${OSHELL_HOME}/oci_auth_refresher.sh
+   ls -l "${OSHELL_HOME}/oci_auth_refresher.sh"
+   chmod +x "${OSHELL_HOME}/oci_auth_refresher.sh"
    ```
 
 3. Authenticate using `ociauth`:
@@ -463,7 +541,7 @@ If the OCI CLI is not installed, follow the [installation guide](https://docs.or
 
 5. Review logs for more details:
    ```bash
-   cat ~/Library/Logs/oci-auth-refresher_DEFAULT.log
+   cat ${HOME}/.oci/sessions/DEFAULT/oci-auth-refresher_DEFAULT.log
    ```
 
 By following these steps, most common issues with the `oci_auth_refresher.sh` process should be resolved.

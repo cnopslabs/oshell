@@ -64,7 +64,8 @@ function start_oci_auth_refresher() {
   fi
 
   # Ensure OSHELL_HOME is exported so oci_auth_refresher.sh can source common functions
-  export OSHELL_HOME="${OSHELL_HOME:-$(dirname "$(realpath "$0")")}"
+  export OSHELL_HOME="${OSHELL_HOME:-$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)}"
+  log_message "Oshell home: ${OSHELL_HOME}"
   nohup "${OSHELL_HOME}/oci_auth_refresher.sh" "$profile" > /dev/null 2>&1 < /dev/null &
   sleep 1
 }
@@ -123,7 +124,6 @@ function oci_auth_logout() {
     echo "Killing refresher process for profile ${CYAN}${profile_name}${UNSET_FMT}"
     log_message "Killing refresher process for profile ${profile_name}"
     kill -9 "$refresher_pid"
-    echo "expired" > "$SESSION_STATUS_FILE"
     echo "Successfully terminated background refresher for profile: ${CYAN}${profile_name}${UNSET_FMT}"
     refresher_terminated=true
   else
@@ -204,15 +204,15 @@ function oci_env_print() {
 # Display OCI tenancy map with formatted colors
 alias ocimap='oci_tenancy_map'
 function oci_tenancy_map() {
-  local yaml_file="${1:-$HOME/.oci/tenancy-map.yaml}"
+  local tenancy_map_path="${HOME}/.oci/tenancy-map.yaml"
 
-  if [[ ! -f "$yaml_file" ]]; then
-    echo "❌ Cannot find tenancy map at: $yaml_file" >&2
+  if [[ ! -f "$tenancy_map_path" ]]; then
+    echo "⚠️ Cannot find tenancy map at: $tenancy_map_path" >&2
     return 1
   fi
 
   if ! command -v yq >/dev/null 2>&1; then
-    echo "❌ 'yq' is required (brew install yq)" >&2
+    echo -e "⚠️ 'yq' is required to render your tenancy map. To install run:\nbrew install yq" >&2
     return 1
   fi
 
@@ -225,7 +225,7 @@ function oci_tenancy_map() {
   printf "${BLUE}%-28s %-28s %-7s %-35s %-s${RESET}\n" "ENVIRONMENT" "TENANCY" "REALM" "COMPARTMENTS" "REGIONS"
 
   # Read each row using yq and print formatted output
-  yq -r '.[] | [.environment, .tenancy, .realm, .compartments, .regions] | @tsv' "$yaml_file" | \
+  yq -r '.[] | [.environment, .tenancy, .realm, .compartments, .regions] | @tsv' "$tenancy_map_path" | \
   while IFS=$'\t' read -r env tenancy realm comp regions; do
     printf "${YELLOW}%-28s${RESET} %-28s %-7s %-35s %s\n" "$env" "$tenancy" "$realm" "$comp" "$regions"
   done

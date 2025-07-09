@@ -23,7 +23,7 @@ if [[ -z "$NOHUP" && -t 1 ]]; then
   echo "Launching OCI auth refresher in background for profile ${OCI_CLI_PROFILE}"
   export NOHUP=1
   # Use full path to script to ensure it's detectable by pgrep
-  script_path=$(realpath "$0")
+  script_path=$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)/$(basename "$0")
   nohup "$script_path" "$OCI_CLI_PROFILE" > /dev/null 2>&1 < /dev/null &
   pid=$!
   echo "Process started with PID $pid"

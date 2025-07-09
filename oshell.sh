@@ -31,7 +31,13 @@ function set_profile_paths() {
 # Helper function to log messages
 function log_message() {
   local message=$1
-  echo "$(date '+%F %T'): $message" >> "$LOG_LOCATION" 2>&1 < /dev/null
+  # Check if LOG_LOCATION is set and the directory exists
+  if [[ -n "$LOG_LOCATION" && -d "$(dirname "$LOG_LOCATION")" ]]; then
+    echo "$(date '+%F %T'): $message" >> "$LOG_LOCATION" 2>&1 < /dev/null
+  else
+    # If we can't log to file, just print to stderr for debugging
+    >&2 echo "log_message: $(date '+%F %T'): $message"
+  fi
 }
 
 # Helper function to find OCI auth refresher process for a specific profile

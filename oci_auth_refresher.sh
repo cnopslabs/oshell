@@ -35,7 +35,7 @@ fi
 # Source common functions from oshell.sh if OSHELL_HOME is set
 if [[ -n "$OSHELL_HOME" && -f "$OSHELL_HOME/oshell.sh" ]]; then
   # Source the configuration and helper functions
-  # shellcheck disable=SC1090
+  # shellcheck disable=SC1090,SC1091
   source "${OSHELL_HOME}/oshell.sh"
 
   # Set paths using the sourced function

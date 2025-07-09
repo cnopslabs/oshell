@@ -36,7 +36,7 @@ fi
 if [[ -n "$OSHELL_HOME" && -f "$OSHELL_HOME/oshell.sh" ]]; then
   # Source the configuration and helper functions
   # shellcheck disable=SC1090
-  source <(grep -A 100 "^# Configuration" "$OSHELL_HOME/oshell.sh" | grep -B 100 "^function oci_authenticate" | grep -v "^function oci_authenticate")
+  source "${OSHELL_HOME}/oshell.sh"
 
   # Set paths using the sourced function
   set_profile_paths
